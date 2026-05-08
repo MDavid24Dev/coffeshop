@@ -1,20 +1,17 @@
 "use client";
 import { useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase.js"; //trayendo variables de entorno
 
-// Asegúrate de que no haya espacios antes o después de estas líneas
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Creamos el cliente pasando las variables
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+//const supabase = createClient();
 
 export default function Home() {
 
   // 2. Función de prueba para la base de datos
   const checkSupabase = async () => {
     try {
-      const { data, error } = await supabase.from('usuarios').select('nombre');
+      const { data, error } = await supabase.from('productos').select('*');
       
       if (error) {
         console.log("❌ Error de Supabase:", error.message);
