@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabase"; // conexion puente cable supabase
+import { supabase } from "@/lib/supabase"; // conexion puente cable supabase db
+
+//Crear cuentas nuevas
 
 export async function registroSupabase (nombre, email, password) { 
   //datos que vamos a exportar de registro 
