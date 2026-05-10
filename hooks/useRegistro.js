@@ -1,3 +1,6 @@
+"use client" 
+// se usa para ejecutar en el navegador de cliente
+
 // hooks/useRegistro.js "estado de registro Metadatos temporales Memoria Ram"
 
 import { useState } from "react"; 
@@ -16,16 +19,15 @@ export function useRegistro(){
    const [password, setPassword] = useState("");
    const [loading, setLoading] = useState(false);
 
-   //variable de router para poder enviar al usuario al punto
+   //variable de router para poder enviar al usuario a un punto
    const router = useRouter();
 
    // 2. "con handle envio estos datos a mi db 
    // en registro "
+
    const handleRegistro = async (e) => {
-    e.preventDefault(); 
-    // e es detener la pagina para enviar datos
-    setLoading(true); 
-    // activa el estado de carga para enviarlos.
+    e.preventDefault();  // e es detener la pagina para enviar datos y que no se recargue
+    setLoading(true);    // activa el estado de carga para enviarlos.
    
     try{
         //llamar el servicio para enviarle los estados de estas cajas
@@ -36,17 +38,26 @@ export function useRegistro(){
 
         if(resultado){
             //si el registro es exitoso lo enviamos a la pagina enrutandolo
-            router.push("/home");
+            router.push("/");
             console.log("El usuario ya esta registrado exitosamente");
         }
 
-
     }catch (error){ 
-    
+      alert("hubo un error al enviar: " + error.message);
+    } finally{
+
+      setLoading(false); // ya dejamos de estar cargando datos de carga
     }
-
-};
-
+  };
+  
+    //enviamos esto al frontend para que esto se pueda usar 
+    return{
+        nombre, setNombre,
+        email, setEmail,
+        password, setPassword,
+        loading,
+        handleRegistro
+    }
 }
 
 
