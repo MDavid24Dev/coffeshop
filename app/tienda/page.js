@@ -2,8 +2,9 @@
 import { useProducto } from "@/hooks/useProductos";
 import { useCarrito } from "@/hooks/useCarrito";
 import { useStripe } from "@/hooks/useStripe";
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState,useEffect } from "react";
+import { useVentaStripe } from "@/hooks/useVentaStripe";
+
 
 export default function TiendaPage() {
     const { productos, loading } = useProducto();
@@ -11,77 +12,33 @@ export default function TiendaPage() {
     const { carrito, agregaAlCarrito, totalCompra, vaciaCarrito, eliminaDelCarrito } = useCarrito();
     // Aquí usamos tu hook de Stripe
     const { iniciarPago, procesando } = useStripe();
-
+    const [montado, setMontado] = useState(false);
+    const { registrarPedidoCompleto } = useVentaStripe(vaciaCarrito); // aqui le decimos aqui esta registrar pedido dentro de este importado
+  
   useEffect(() => {
+    setMontado(true);
     const query = new URLSearchParams(window.location.search);
     const data = localStorage.getItem("carrito");
     const carritoReal = data ? JSON.parse(data) : [];
 
+    const totalReal = carritoReal.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+
     // CASO: PAGO EXITOSO
-    if (query.get('success')) {
-        if (carritoReal.length > 0) {
-            console.log("¡Éxito! Procesando pedido pagado...");
-            registrarPedidoEstado(carritoReal, 'pagado');
-        } else {
-            console.warn("Éxito reportado, pero el carrito está vacío.");
-        }
+    if (query.get('success') && carritoReal.length > 0) {
+        console.log("💰 Detectado éxito en Stripe. Procesando...");
+        registrarPedidoCompleto(carritoReal, 'pagado',totalReal);
         window.history.replaceState({}, document.title, window.location.pathname);
     }
-      
-    // CASO: CANCELADO O RECHAZADO
+
     if (query.get('canceled')) {
-        console.log("Pago cancelado. Registrando incidencia...");
-        // Pasamos el carrito solo para tener el total, pero no descontaremos stock
-        registrarPedidoEstado(carritoReal, 'cancelado');
+        console.log("❌ Detectado pago cancelado.");
+        registrarPedidoCompleto(carritoReal, 'cancelado',totalReal);
         window.history.replaceState({}, document.title, window.location.pathname);
     }
+    // se monta solo para que no me traiga mas productos
 }, []);
 
-  // Ahora recibe 'carritoParaDescontar' como parámetro
-const registrarPedidoEstado = async (carritoParaDescontar, estadoFinal) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // 1. Insertamos el pedido en la base de datos
-    const { data: pedido, error } = await supabase
-        .from('pedido')
-        .insert([{
-            usuario_id: user.id,
-            estado: estadoFinal,
-            total: totalCompra
-        }])
-        .select()
-        .single();
-
-    if (error) return console.error("Error en Supabase:", error);
-
-    // 2. Lógica condicional según el estado
-    if (estadoFinal === 'pagado') {
-        // Solo descontamos si el pago fue exitoso
-        for (const item of carritoParaDescontar) {
-            // Traemos el stock actual para evitar errores
-            const { data: producto } = await supabase
-                .from('productos')
-                .select('stock')
-                .eq('id', item.id)
-                .single();
-
-            if (producto) {
-                await supabase
-                    .from('productos')
-                    .update({ stock: producto.stock - item.cantidad })
-                    .eq('id', item.id);
-            }
-        }
-        
-        vaciaCarrito();
-        localStorage.removeItem("carrito"); // Limpieza total
-        alert("✅ ¡Venta confirmada! El stock ha sido actualizado en CoffeShop.");
-    } else {
-        // Si fue cancelado, solo avisamos al usuario
-        alert("❌ El pago fue cancelado. El pedido se registró como NO PAGADO.");
-    }
-};
+if (!montado) return null;
 
     return (
         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-gray-50 min-h-screen">
@@ -189,3 +146,49 @@ const registrarPedidoEstado = async (carritoParaDescontar, estadoFinal) => {
         </div>
     );
 }
+
+{/**  // Ahora recibe 'carritoParaDescontar' como parámetro
+const registrarPedidoEstado = async (carritoParaDescontar, estadoFinal) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 1. Insertamos el pedido en la base de datos
+    const { data: pedido, error } = await supabase
+        .from('pedido')
+        .insert([{
+            usuario_id: user.id,
+            estado: estadoFinal,
+            total: totalCompra
+        }])
+        .select()
+        .single();
+
+    if (error) return console.error("Error en Supabase:", error);
+
+    // 2. Lógica condicional según el estado
+    if (estadoFinal === 'pagado') {
+        // Solo descontamos si el pago fue exitoso
+        for (const item of carritoParaDescontar) {
+            // Traemos el stock actual para evitar errores
+            const { data: producto } = await supabase
+                .from('productos')
+                .select('stock')
+                .eq('id', item.id)
+                .single();
+
+            if (producto) {
+                await supabase
+                    .from('productos')
+                    .update({ stock: producto.stock - item.cantidad })
+                    .eq('id', item.id);
+            }
+        }
+        
+        vaciaCarrito();
+        localStorage.removeItem("carrito"); // Limpieza total
+        alert("✅ ¡Venta confirmada! El stock ha sido actualizado en CoffeShop.");
+    } else {
+        // Si fue cancelado, solo avisamos al usuario
+        alert("❌ El pago fue cancelado. El pedido se registró como NO PAGADO.");
+    }
+}; */}
