@@ -2,16 +2,50 @@
 import { useProducto } from "@/hooks/useProductos";
 import { useCarrito } from "@/hooks/useCarrito";
 import { useStripe } from "@/hooks/useStripe";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function TiendaPage() {
     const { productos, loading } = useProducto();
+    // hook del carrito
     const { carrito, agregaAlCarrito, totalCompra, vaciaCarrito, eliminaDelCarrito } = useCarrito();
     // Aquí usamos tu hook de Stripe
     const { iniciarPago, procesando } = useStripe();
 
+    useEffect(() => {
+        const query = new URLSearchParams(window.location.search);
+
+        if (query.get('success')) {
+            registrarPedido();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
+
+    const registrarPedido = async () => {
+     const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        alert("Debes estar logueado para registrar el pedido");
+        return;
+    }
+
+        // Aquí mandas la info a Supabase
+        const { data, error } = await supabase
+            .from('pedido')
+            .insert([
+                {
+                usuario_id: user.id, // Usamos el UUID del usuario
+                estado: 'pagado',
+                total: totalCompra  // Asegúrate que use totalCompra del hook
+                }
+            ]);
+
+        if (!error) alert("¡Pedido guardado en CoffeShop!");
+    };
+
     return (
         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-gray-50 min-h-screen">
-            
+
             {/* 1. SECCIÓN DE PRODUCTOS */}
             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {loading ? (
@@ -41,7 +75,7 @@ export default function TiendaPage() {
             <aside className="md:col-span-1">
                 <div className="border border-orange-100 p-6 rounded-2xl bg-white shadow-xl h-fit sticky top-6">
                     <h2 className="font-bold text-xl mb-6 text-orange-950 flex items-center justify-between">
-                        🛒 Tu Pedido 
+                        🛒 Tu Pedido
                         <span className="bg-orange-100 text-orange-800 text-xs py-1 px-3 rounded-full">
                             {carrito.length}
                         </span>
@@ -85,12 +119,11 @@ export default function TiendaPage() {
                             <button
                                 onClick={() => iniciarPago(carrito)}
                                 disabled={procesando}
-                                className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all ${
-                                    procesando 
-                                    ? 'bg-gray-400 cursor-not-allowed' 
-                                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
-                                }`}
-                                
+                                className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all ${procesando
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                                    }`}
+
                             >
                                 {procesando ? (
                                     <span className="flex items-center justify-center gap-2">
