@@ -12,67 +12,75 @@ export default function TiendaPage() {
     // Aquí usamos tu hook de Stripe
     const { iniciarPago, procesando } = useStripe();
 
-    useEffect(() => {
-     const query = new URLSearchParams(window.location.search);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const data = localStorage.getItem("carrito");
+    const carritoReal = data ? JSON.parse(data) : [];
 
+    // CASO: PAGO EXITOSO
     if (query.get('success')) {
-        // --- ESCÁNER DE DIAGNÓSTICO ---
-        console.log("Llaves detectadas en LocalStorage:", Object.keys(localStorage));
-        
-        // Intentamos leer con el nombre exacto que pusiste en tu hook ("carrito")
-        const data = localStorage.getItem("carrito");
-        console.log("Contenido crudo de 'carrito':", data);
-
-        if (data) {
-            const carritoReal = JSON.parse(data);
-            if (carritoReal.length > 0) {
-                console.log("¡Éxito! Carrito recuperado:", carritoReal);
-                registrarPedidoYDescontar(carritoReal);
-            } else {
-                console.warn("El carrito existe pero está vacío [].");
-            }
+        if (carritoReal.length > 0) {
+            console.log("¡Éxito! Procesando pedido pagado...");
+            registrarPedidoEstado(carritoReal, 'pagado');
         } else {
-            console.error("No existe ninguna llave llamada 'carrito' en LocalStorage.");
+            console.warn("Éxito reportado, pero el carrito está vacío.");
         }
-        // ------------------------------
         window.history.replaceState({}, document.title, window.location.pathname);
     }
-    }, []);
+      
+    // CASO: CANCELADO O RECHAZADO
+    if (query.get('canceled')) {
+        console.log("Pago cancelado. Registrando incidencia...");
+        // Pasamos el carrito solo para tener el total, pero no descontaremos stock
+        registrarPedidoEstado(carritoReal, 'cancelado');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}, []);
 
   // Ahora recibe 'carritoParaDescontar' como parámetro
-const registrarPedidoYDescontar = async (carritoParaDescontar) => {
+const registrarPedidoEstado = async (carritoParaDescontar, estadoFinal) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 1. Insertar el pedido (igual que antes)
-    const { error: errorPedido } = await supabase
+    // 1. Insertamos el pedido en la base de datos
+    const { data: pedido, error } = await supabase
         .from('pedido')
         .insert([{
             usuario_id: user.id,
-            estado: 'pagado',
+            estado: estadoFinal,
             total: totalCompra
-        }]);
+        }])
+        .select()
+        .single();
 
-    if (errorPedido) return console.error(errorPedido);
+    if (error) return console.error("Error en Supabase:", error);
 
-    // 2. Descuento de Stock usando el carrito que le pasamos
-    for (const item of carritoParaDescontar) {
-        const { data: productoActual } = await supabase
-            .from('productos')
-            .select('stock')
-            .eq('id', item.id)
-            .single();
-
-        if (productoActual) {
-            await supabase
+    // 2. Lógica condicional según el estado
+    if (estadoFinal === 'pagado') {
+        // Solo descontamos si el pago fue exitoso
+        for (const item of carritoParaDescontar) {
+            // Traemos el stock actual para evitar errores
+            const { data: producto } = await supabase
                 .from('productos')
-                .update({ stock: productoActual.stock - item.cantidad })
-                .eq('id', item.id);
-        }
-    }
+                .select('stock')
+                .eq('id', item.id)
+                .single();
 
-    alert("✅ ¡Pedido y Stock actualizados con éxito!");
-    vaciaCarrito();
+            if (producto) {
+                await supabase
+                    .from('productos')
+                    .update({ stock: producto.stock - item.cantidad })
+                    .eq('id', item.id);
+            }
+        }
+        
+        vaciaCarrito();
+        localStorage.removeItem("carrito"); // Limpieza total
+        alert("✅ ¡Venta confirmada! El stock ha sido actualizado en CoffeShop.");
+    } else {
+        // Si fue cancelado, solo avisamos al usuario
+        alert("❌ El pago fue cancelado. El pedido se registró como NO PAGADO.");
+    }
 };
 
     return (
