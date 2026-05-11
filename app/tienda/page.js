@@ -13,35 +13,67 @@ export default function TiendaPage() {
     const { iniciarPago, procesando } = useStripe();
 
     useEffect(() => {
-        const query = new URLSearchParams(window.location.search);
+     const query = new URLSearchParams(window.location.search);
 
-        if (query.get('success')) {
-            registrarPedido();
-            window.history.replaceState({}, document.title, window.location.pathname);
+    if (query.get('success')) {
+        // --- ESCÁNER DE DIAGNÓSTICO ---
+        console.log("Llaves detectadas en LocalStorage:", Object.keys(localStorage));
+        
+        // Intentamos leer con el nombre exacto que pusiste en tu hook ("carrito")
+        const data = localStorage.getItem("carrito");
+        console.log("Contenido crudo de 'carrito':", data);
+
+        if (data) {
+            const carritoReal = JSON.parse(data);
+            if (carritoReal.length > 0) {
+                console.log("¡Éxito! Carrito recuperado:", carritoReal);
+                registrarPedidoYDescontar(carritoReal);
+            } else {
+                console.warn("El carrito existe pero está vacío [].");
+            }
+        } else {
+            console.error("No existe ninguna llave llamada 'carrito' en LocalStorage.");
         }
+        // ------------------------------
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
     }, []);
 
-    const registrarPedido = async () => {
-     const { data: { user } } = await supabase.auth.getUser();
+  // Ahora recibe 'carritoParaDescontar' como parámetro
+const registrarPedidoYDescontar = async (carritoParaDescontar) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-    if (!user) {
-        alert("Debes estar logueado para registrar el pedido");
-        return;
+    // 1. Insertar el pedido (igual que antes)
+    const { error: errorPedido } = await supabase
+        .from('pedido')
+        .insert([{
+            usuario_id: user.id,
+            estado: 'pagado',
+            total: totalCompra
+        }]);
+
+    if (errorPedido) return console.error(errorPedido);
+
+    // 2. Descuento de Stock usando el carrito que le pasamos
+    for (const item of carritoParaDescontar) {
+        const { data: productoActual } = await supabase
+            .from('productos')
+            .select('stock')
+            .eq('id', item.id)
+            .single();
+
+        if (productoActual) {
+            await supabase
+                .from('productos')
+                .update({ stock: productoActual.stock - item.cantidad })
+                .eq('id', item.id);
+        }
     }
 
-        // Aquí mandas la info a Supabase
-        const { data, error } = await supabase
-            .from('pedido')
-            .insert([
-                {
-                usuario_id: user.id, // Usamos el UUID del usuario
-                estado: 'pagado',
-                total: totalCompra  // Asegúrate que use totalCompra del hook
-                }
-            ]);
-
-        if (!error) alert("¡Pedido guardado en CoffeShop!");
-    };
+    alert("✅ ¡Pedido y Stock actualizados con éxito!");
+    vaciaCarrito();
+};
 
     return (
         <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-gray-50 min-h-screen">
@@ -120,8 +152,8 @@ export default function TiendaPage() {
                                 onClick={() => iniciarPago(carrito)}
                                 disabled={procesando}
                                 className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all ${procesando
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                                     }`}
 
                             >

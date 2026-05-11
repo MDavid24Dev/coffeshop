@@ -16,7 +16,10 @@ export const useCarrito = () =>{
 
   //2. Guardar en el localStore cuando este va cambiando
   useEffect (() => {
-   localStorage.setItem("carrito",JSON.stringify(carrito)); //aqui estoy actualizando el carrito nuevamente
+    // evitamos que nos borre el localStore del carrito los items de este
+    if(carrito.length > 0){
+      localStorage.setItem("carrito",JSON.stringify(carrito)); //aqui estoy actualizando el carrito nuevamente
+    }
   }, [carrito] );
 
   //3. funcion de añadir productos Agrega
