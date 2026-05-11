@@ -90,6 +90,7 @@ export default function TiendaPage() {
                                     ? 'bg-gray-400 cursor-not-allowed' 
                                     : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
                                 }`}
+                                
                             >
                                 {procesando ? (
                                     <span className="flex items-center justify-center gap-2">
