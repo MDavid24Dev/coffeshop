@@ -15,16 +15,19 @@ export const useVentaStripe = ( vaciarCarrito) => {
         }
 
         try {
+            //USUARIO AUTENTICADO CON SUPABASE
             const { data: { user }, error: authError } = await supabase.auth.getUser();
            
+            //VALIDACION DE USUARIO
             if (authError || !user) {
                 console.error("👤 ERROR AUTH:", authError?.message || "Sin sesión");
                 throw new Error("Usuario no autenticado")
             };
             console.log("👤 Usuario detectado:", user.email);
+            //--------------------------------------------------------------
             
             console.log("⏳ Intentando insertar en tabla 'pedido'...");
-            // 1. INSERTAR PEDIDO
+            // 1. INSERTAR PEDIDO en tabla pedidos
             const { data: pedido, error: errorPedido } = await supabase
                 .from('pedido')
                 .insert([{
@@ -32,16 +35,34 @@ export const useVentaStripe = ( vaciarCarrito) => {
                     estado: estadoFinal,
                     total: totalCalculado
                 }])
-                .select()
-                .single();
+                .select().single();
 
             if (errorPedido) {
                 console.error("❌ Error en tabla 'pedido':", errorPedido.message);
                 throw errorPedido;
             }
-
             console.log("✅ Pedido creado con ID:", pedido.id);
 
+            //---------------------------------------------------------------
+            
+            //REGISTRAR EN COMPRAS
+            if(pedido && estadoFinal === "pagado"){
+               const query = new URLSearchParams(window.location.search); 
+               // para consultar antes de que se cierre la ventana
+               const sesionId = query.get('session_id'); 
+               // saber que usuario hizo la compra
+               await supabase.from ('compras').insert ([
+                {
+                    pedido_id: pedido.id,
+                    metodo_pago: 'Card',
+                    estado_pago: 'pagado',
+                    referencia_pago: sesionId || 'pago_stripe_manual',
+                }
+            ]);
+             console.log("Ya quedo resgitrado la compra ");
+            }
+
+            //--------------------------------------------------------------
             // 2. SOLO SI ESTÁ PAGADO -> FACTURA Y STOCK
             if (estadoFinal === 'pagado') {
                 console.log("💳 Pago confirmado. Procesando Factura y Stock...");
@@ -67,7 +88,7 @@ export const useVentaStripe = ( vaciarCarrito) => {
                 }
 
                 console.log("✅ Factura guardada correctamente.");
-
+             //--------------------------------------------------------------------------------------------
                 // 3. ACTUALIZAR STOCK (Uno por uno)
                 console.log("🔄 Actualizando inventario...");
                 for (const item of carritoReal) {
@@ -86,7 +107,7 @@ export const useVentaStripe = ( vaciarCarrito) => {
                         if (errorStock) console.error("Error stock producto:", item.id, errorStock.message);
                     }
                 }
-
+            //--------------------------------------------------------------------------------------------------
                 // LIMPIEZA FINAL
                 vaciarCarrito();
                 localStorage.removeItem("carrito");
@@ -95,6 +116,8 @@ export const useVentaStripe = ( vaciarCarrito) => {
             } else {
                 alert("⚠️ El pago fue registrado como cancelado.");
             }
+
+        //---------------------------------------------------------------
 
         } catch (error) {
             console.error("🔥 FALLO CRÍTICO:", error.message);
