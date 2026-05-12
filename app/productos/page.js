@@ -55,7 +55,7 @@ export default function ProductosPage() {
 
     return (
         <div className="p-8">
-            <h1 className="text-2xl font-bold mb-4">Gestionar Productos</h1>
+            <h1 className="text-2xl font-bold mb-4 text-center">Gestionar Productos</h1>
 
             <form onSubmit={handleSubmit} className="flex gap-2 mb-8">
                 <input
@@ -110,7 +110,7 @@ export default function ProductosPage() {
                 )}
             </form>
 
-            <h2 className="text-xl font-semibold mb-4">Inventario Actual</h2>
+            <h2 className="text-xl font-semibold mb-4 text-center">Inventario Actual</h2>
 
             <TablaProductos
                 lista={productos}
@@ -128,8 +128,8 @@ function TablaProductos({ lista, alBorrar, alSeleccionar }) {
             <table className="w-full text-left">
                 <thead className="bg-gray-100 border-b">
                     <tr>
-                        <th className="p-4">Producto</th>
-                        <th className="p-4 text-center">Acciones</th>
+                        <th className="w-[10%] font-bold text-gray-700">Producto</th>
+                        <th className=" w-[80%] text-center font-bold text-gray-700">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
