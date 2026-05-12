@@ -1,6 +1,7 @@
 "use client" //este corre en el navegador el adminitrador que maneja todo cuando esta en frontend con el
 
 import { useState, useEffect } from "react";
+import { subirImagen } from "@/services/cloudinary"
 
 //llamar mis funciones del crudProductos
 
@@ -41,18 +42,27 @@ export function useProducto(){
         cargaTodo();
     }, []);
 
-    //AgregarProductos crear
-    const agregarProducto = async (datos) => {
-      setLoading(true);
-      try{
-        await crearProducto(datos);
-        await cargaTodo(); // reactulizo y cargo todos los productos
-      }catch (error){
-        alert(error.message);
-      }finally{
-        setLoading(false);
-      }
-    };
+    //AgregarProducto + cloudinary
+    const agregarProducto = async (datos, archivo) => {
+  setLoading(true);
+  try {
+    let urlImagen = "";
+
+    // Si el administrador seleccionó una foto, la subimos primero
+    if (archivo) {
+      const { subirImagen } = await import("@/services/cloudinary"); 
+      urlImagen = await subirImagen(archivo);
+    }
+
+    // Guardamos en Supabase con el link (o vacío si no hubo foto)
+    await crearProducto({ ...datos, imagen_url: urlImagen });
+    await cargaTodo();
+  } catch (error) {
+    alert("Error al crear: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
     //borrar producto Delete
     const borrarProducto = async (id) =>{
@@ -71,18 +81,26 @@ export function useProducto(){
 
     // modificar Actulizar update productos
 
-    const editarProducto = async (id, nuevosDatos) =>{
-        setLoading(true);
-        try{
-         await actualizarProducto(id,nuevosDatos);
-         setProductosSeleccionado(null); // se cierra para que no puedan actualizar una vez se cargaron datos
-         await cargaTodo(); //Aqui actualiza todo ya
-        }catch(error){
-           alert(error.message);
-        }finally{
-            setLoading(false);
-        }
+   const editarProducto = async (id, nuevosDatos, archivo) => {
+  setLoading(true);
+  try {
+    let urlImagen = productoSeleccionado.imagen_url; // Mantenemos la foto actual
+
+    // Si se eligió una foto NUEVA, la reemplazamos en Cloudinary
+    if (archivo) {
+      const { subirImagen } = await import("@/services/cloudinary");
+      urlImagen = await subirImagen(archivo);
     }
+
+    await actualizarProducto(id, { ...nuevosDatos, imagen_url: urlImagen });
+    setProductosSeleccionado(null);
+    await cargaTodo();
+  } catch (error) {
+    alert("Error al actualizar: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
     //se pasa todas estas herramientas a el Frontend para usarlas
     return{
