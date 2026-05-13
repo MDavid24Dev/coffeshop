@@ -1,3 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Esto obliga a Tailwind a escanear las sentencias descritas de estilo con los formatos */
+@source "./app/**/*.{js,ts,jsx,tsx}";
+@source "./app/login/page.js";

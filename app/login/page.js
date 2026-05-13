@@ -9,9 +9,12 @@ export default function LoginPage() {
     const { setEmail, setPassword, handleLogin, loading } = useLogin();
 
     return (
-        <main style={{ padding: "40px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <h1>☕ Bienvenido de nuevo</h1>
-            <p>Ingresa tus datos para entrar al CoffeeShop</p>
+        <main className="min-h-screen w-full  flex items-center bg-amber-500  ">
+                            
+          <div className=" mx-auto px-4 border-1">          
+             <h1 className=" font-black w-2xl text-green-700 text-2xl p-3">☕ Bienvenido de nuevo</h1>
+
+            <p>Ingresa tus datos </p>
 
             {/* El formulario captura el evento de "Enter" o clic en el botón */}
             <form onSubmit={handleLogin} style={{ width: "300px", display: "flex", flexDirection: "column", gap: "15px" }}>
@@ -20,7 +23,7 @@ export default function LoginPage() {
                    mandamos ese dato a la caja vacía 'email' del Hook */}
                 <div>
                     <label>Correo Electrónico:</label>
-                    <input 
+                    <input className="border-1"
                         type="email" 
                         placeholder="tu@correo.com"
                         onChange={(e) => setEmail(e.target.value)} // El "puente" que llena la caja
@@ -58,6 +61,9 @@ export default function LoginPage() {
                     {loading ? "Validando credenciales..." : "Entrar al Local"}
                 </button>
             </form>
+
+         </div>{/*contenedor Padre*/}
+ 
         </main>
     )
 }
