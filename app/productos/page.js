@@ -54,69 +54,81 @@ export default function ProductosPage() {
     };
 
     return (
-        <div className="p-8">
-            <h1 className="text-2xl font-bold mb-4 text-center">Gestionar Productos</h1>
 
-            <form onSubmit={handleSubmit} className="flex gap-2 mb-8">
-                <input
-                    placeholder="Nombre"
-                    className="border p-2"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    required
-                />
-
-                <input
-                    type="number"
-                    placeholder="Precio"
-                    className="border p-2"
-                    value={formData.precio}
-                    onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
-                    required
-                />
-
-                <input
-                    type="number"
-                    placeholder="Stock"
-                    className="border p-2"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    required
-                />
-
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-500">Imagen del Producto</label>
+        <div className="bg-amber-300 p-8">
+            <div className="grid md:grid-cols-2 gap-5">
+              {/* COLUMNA IZQUIERDA: Formulario */}
+            <div>
+                <h1 className="text-2xl font-bold mb-4 text-center md:text-left">
+                    Gestionar Productos
+                </h1>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-lg shadow-md">
                     <input
-                        name="foto"
-                        type="file"
-                        accept="image/*"
-                        className="border p-1 text-sm"
+                        placeholder="Nombre"
+                        className="border p-2 rounded"
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                        required
                     />
-                </div>
 
-                {/* BOTÓN DINÁMICO: Cambia de color y texto si estamos editando */}
-                <button className={`p-2 px-4 rounded text-white ${productoSeleccionado ? 'bg-green-600' : 'bg-blue-500'}`}>
-                    {loading ? "Cargando..." : (productoSeleccionado ? "Actualizar" : "Agregar")}
-                </button>
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            type="number"
+                            placeholder="Precio"
+                            className="border p-2 rounded"
+                            value={formData.precio}
+                            onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                            required
+                        />
+                        <input
+                            type="number"
+                            placeholder="Stock"
+                            className="border p-2 rounded"
+                            value={formData.stock}
+                            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                            required
+                        />
+                    </div>
 
-                {productoSeleccionado && (
-                    <button
-                        type="button"
-                        onClick={() => { setProductosSeleccionado(null); setFormData({ nombre: "", precio: "", stock: "" }); }}
-                        className="text-gray-400 text-sm underline"
-                    >
-                        Cancelar
-                    </button>
-                )}
-            </form>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1">Imagen del Producto</label>
+                        <input
+                            name="foto"
+                            type="file"
+                            accept="image/*"
+                            className="border p-1 text-sm bg-gray-50 rounded"
+                        />
+                    </div>
 
-            <h2 className="text-xl font-semibold mb-4 text-center">Inventario Actual</h2>
+                    <div className="flex gap-2">
+                        <button className={`flex-1 p-2 rounded text-white font-bold ${productoSeleccionado ? 'bg-green-600' : 'bg-blue-500'}`}>
+                            {loading ? "Cargando..." : (productoSeleccionado ? "Actualizar" : "Agregar")}
+                        </button>
+                    
+                        {productoSeleccionado && (
+                            <button
+                                type="button"
+                                onClick={() => { setProductosSeleccionado(null); setFormData({ nombre: "", precio: "", stock: "" }); }}
+                                className="px-4 text-gray-500 text-sm underline hover:text-red-500"
+                            >
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
 
-            <TablaProductos
-                lista={productos}
-                alBorrar={borrarProducto}
-                alSeleccionar={setProductosSeleccionado} // 👈 CONECTAMOS EL CABLE AQUÍ
-            />
+                <div>
+                <h2 className="text-xl font-semibold mb-4 text-center">Inventario Actual</h2>
+
+                <TablaProductos
+                    lista={productos}
+                    alBorrar={borrarProducto}
+                    alSeleccionar={setProductosSeleccionado} // 👈 CONECTAMOS EL CABLE AQUÍ
+                />
+            </div>
+            </div>
+            {/*componente padre */}
         </div>
     );
 }
