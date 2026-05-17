@@ -4,6 +4,9 @@ import { useProducto } from "@/hooks/useProductos";
 import { useState, useEffect } from "react";
 
 export default function ProductosPage() {
+    
+    const [preview, setPreview] = useState(null);
+
     const {
         productos,
         loading,
@@ -50,150 +53,242 @@ export default function ProductosPage() {
 
         setFormData({ nombre: "", precio: "", stock: "" });
         if (e.target.foto) e.target.foto.value = ""; // Limpia el input de archivo
-        setProductosSeleccionado(null); // Ahora sí funcionará porque la importamos arriba
+        setProductosSeleccionado(null); // Ahora sí funcionará porque se importa arriba
     };
 
-    return (
+   // 1. Asegúrate de tener estos estados al inicio de tu componente principal:
+// const [formData, setFormData] = useState({ nombre: "", precio: "", stock: "" });
+// const [preview, setPreview] = useState(null); // 👈 NUEVO ESTADO PARA LA VISTA PREVIA
 
-        <div className="bg-amber-300 p-8">
-            <div className="grid md:grid-cols-2 gap-5">
-              {/* COLUMNA IZQUIERDA: Formulario */}
-            <div>
-                <h1 className="text-2xl font-bold mb-4 text-center md:text-left">
-                    Gestionar Productos
-                </h1>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-lg shadow-md">
-                    <input
-                        placeholder="Nombre"
-                        className="border p-2 rounded"
-                        value={formData.nombre}
-                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        required
-                    />
-
-                    <div className="grid grid-cols-2 gap-2">
-                        <input
-                            type="number"
-                            placeholder="Precio"
-                            className="border p-2 rounded"
-                            value={formData.precio}
-                            onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="number"
-                            placeholder="Stock"
-                            className="border p-2 rounded"
-                            value={formData.stock}
-                            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="flex flex-col">
-                        <label className="text-xs text-gray-500 mb-1">Imagen del Producto</label>
-                        <input
-                            name="foto"
-                            type="file"
-                            accept="image/*"
-                            className="border p-1 text-sm bg-gray-50 rounded"
-                        />
-                    </div>
-
-                    <div className="flex gap-2">
-                        <button className={`flex-1 p-2 rounded text-white font-bold ${productoSeleccionado ? 'bg-green-600' : 'bg-blue-500'}`}>
-                            {loading ? "Cargando..." : (productoSeleccionado ? "Actualizar" : "Agregar")}
-                        </button>
+return (
+    <div className="min-h-screen bg-[#FFFDF9] py-10 px-4 sm:px-6 lg:px-8 selection:bg-amber-200">
+        <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* COLUMNA IZQUIERDA: Formulario */}
+                <div className="lg:col-span-5 space-y-4">
+                    <h1 className="text-2xl font-extrabold text-[#2B1B17] tracking-tight mb-2">
+                        Gestionar Productos
+                    </h1>
                     
-                        {productoSeleccionado && (
-                            <button
-                                type="button"
-                                onClick={() => { setProductosSeleccionado(null); setFormData({ nombre: "", precio: "", stock: "" }); }}
-                                className="px-4 text-gray-500 text-sm underline hover:text-red-500"
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5 bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100">
+                        
+                        {/* 🖼️ CONTENEDOR DE VISTA PREVIA DINÁMICA */}
+                        <div className="flex flex-col gap-1.5 items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl p-4 bg-[#FFFDF9]/50 min-h-[160px] transition-all">
+                            {preview ? (
+                                <div className="relative w-full flex flex-col items-center group">
+                                    <img 
+                                        src={preview} 
+                                        alt="Vista previa" 
+                                        className="w-32 h-32 object-cover rounded-2xl shadow-md border border-white"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPreview(null);
+                                            document.getElementsByName("foto")[0].value = "";
+                                        }}
+                                        className="mt-2 text-xs font-semibold text-red-500 hover:underline bg-red-50 px-2.5 py-1 rounded-md transition-colors"
+                                    >
+                                        Remover imagen
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center space-y-1 p-4">
+                                    <span className="text-3xl block opacity-60">📸</span>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sin vista previa</p>
+                                    <p className="text-[11px] text-gray-400">Selecciona un archivo abajo</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Input Nombre */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Nombre del café</label>
+                            <input
+                                placeholder="Ej. Caramel Macchiato"
+                                className="w-full bg-[#FFFDF9] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-medium text-gray-800"
+                                value={formData.nombre}
+                                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        {/* Grid Precio y Stock */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Precio ($)</label>
+                                <input
+                                    type="number"
+                                    placeholder="0.00"
+                                    className="w-full bg-[#FFFDF9] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-medium text-gray-800"
+                                    value={formData.precio}
+                                    onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Stock actual</label>
+                                <input
+                                    type="number"
+                                    placeholder="0"
+                                    className="w-full bg-[#FFFDF9] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-medium text-gray-800"
+                                    value={formData.stock}
+                                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Input Imagen */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Imagen del Producto</label>
+                            <input
+                                name="foto"
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        setPreview(URL.createObjectURL(file));
+                                    }
+                                }}
+                                className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-amber-100 file:text-amber-900 hover:file:bg-amber-200 file:cursor-pointer bg-[#FFFDF9] border border-gray-200 rounded-xl p-1"
+                            />
+                        </div>
+
+                        {/* Botones de acción */}
+                        <div className="flex items-center gap-3 pt-2">
+                            <button 
+                                type="submit"
+                                className={`flex-1 py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide shadow-sm transition-all duration-200 text-white active:scale-[0.98]
+                                    ${loading 
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                        : productoSeleccionado 
+                                            ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                            : 'bg-[#FFC554] hover:bg-[#e6b147] text-gray-900'
+                                    }`}
                             >
-                                Cancelar
+                                {loading ? "Cargando..." : (productoSeleccionado ? "Actualizar Producto" : "Agregar Producto")}
                             </button>
-                        )}
-                    </div>
-                </form>
-            </div>
+                        
+                            {productoSeleccionado && (
+                                <button
+                                    type="button"
+                                    onClick={() => { 
+                                        setProductosSeleccionado(null); 
+                                        setFormData({ nombre: "", precio: "", stock: "" }); 
+                                        setPreview(null);
+                                    }}
+                                    className="px-4 py-3.5 text-sm font-semibold text-gray-500 hover:text-red-500 hover:underline transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            )}
+                        </div>
+                    </form>
+                </div>
 
-                <div>
-                <h2 className="text-xl font-semibold mb-4 text-center">Inventario Actual</h2>
-
-                <TablaProductos
-                    lista={productos}
-                    alBorrar={borrarProducto}
-                    alSeleccionar={setProductosSeleccionado} // 👈 CONECTAMOS EL CABLE AQUÍ
-                />
+                {/* COLUMNA DERECHA: Inventario */}
+                <div className="lg:col-span-7 space-y-4">
+                    <h2 className="text-2xl font-extrabold text-[#2B1B17] tracking-tight mb-2">
+                        Inventario Actual
+                    </h2>
+                    <TablaProductos
+                        lista={productos}
+                        alBorrar={borrarProducto}
+                        alSeleccionar={(prod) => {
+                            setProductosSeleccionado(prod);
+                            setPreview(prod.imagen_url || null);
+                        }}
+                    />
+                </div>
             </div>
-            </div>
-            {/*componente padre */}
         </div>
-    );
-}
+    </div>
+);
+} // 👈 AQUÍ TERMINA LA FUNCIÓN PRINCIPAL "ProductosPage"
 
-// TU COMPONENTE DE TABLA (Se queda igual, pero ahora recibe alSeleccionar)
+// ==========================================
+// COMPONENTE DE TABLA INDEPENDIENTE (Fuera de la otra función)
+// ==========================================
 function TablaProductos({ lista, alBorrar, alSeleccionar }) {
     return (
-        <div className="bg-white shadow-md rounded-lg overflow-hidden border">
-            <table className="w-full text-left">
-                <thead className="bg-gray-100 border-b">
-                    <tr>
-                        <th className="w-[10%] font-bold text-gray-700">Producto</th>
-                        <th className=" w-[80%] text-center font-bold text-gray-700">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {lista.map((prod) => (
-                        <tr key={prod.id} className="border-b hover:bg-gray-50">
-                            <td className="p-4">
-                                {/* Contenedor para alinear imagen y texto */}
-                                <div className="flex items-center gap-4">
-
-                                    {/* 1. LA IMAGEN: Solo se muestra si existe la URL */}
-                                    {prod.imagen_url ? (
-                                        <img
-                                            /* Este truco añade parámetros a la URL:
-                                               w_200: Redimensiona a 200px (suficiente para una miniatura)
-                                                c_fill: Recorta para que encaje
-                                               g_auto: Enfoca lo importante (el café) automáticamente
-                                             */
-                                            src={prod.imagen_url.replace('/upload/', '/upload/w_150,h_150,c_fill,g_auto/')}
-                                            alt={prod.nombre}
-                                            //style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                            className="w-12 h-12 object-cover rounded shadow-sm border"
-                                        />
-                                    ) : (
-                                        /* Un cuadro gris por si no hay foto */
-                                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-[10px] text-gray-400">
-                                            S/F
-                                        </div>
-                                    )}
-
-                                    {/* 2. LOS TEXTOS: Nombre, precio y stock */}
-                                    <div>
-                                        <p className="font-bold text-gray-800">{prod.nombre}</p>
-                                        <p className="text-sm text-gray-500">
-                                            ${prod.precio.toLocaleString()} — Stock: {prod.stock}
-                                        </p>
-                                    </div>
-                                </div>
-                            </td>
-
-                            {/* ... el resto de tus botones de acciones se quedan igual ... */}
-                            <td className="p-4 text-center flex justify-center gap-3">
-                                <button onClick={() => alSeleccionar(prod)} className="text-blue-600 hover:underline">
-                                    Editar
-                                </button>
-                                <button onClick={() => alBorrar(prod.id)} className="text-red-500 hover:underline">
-                                    Eliminar
-                                </button>
-                            </td>
+        <div className="bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] rounded-3xl overflow-hidden border border-gray-100">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead className="bg-[#FFFDF9] border-b border-gray-100">
+                        <tr>
+                            <th className="p-4 text-xs font-bold uppercase tracking-wider text-gray-500 pl-6">Producto</th>
+                            <th className="p-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right pr-6">Acciones</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                        {lista.length === 0 ? (
+                            <tr>
+                                <td colSpan="2" className="p-8 text-center text-sm text-gray-400 font-medium">
+                                    No hay productos en el inventario todavía.
+                                </td>
+                            </tr>
+                        ) : (
+                            lista.map((prod) => (
+                                <tr key={prod.id} className="hover:bg-[#FFFDF9]/60 transition-colors group">
+                                    <td className="p-4 pl-6">
+                                        <div className="flex items-center gap-4">
+                                            {/* Imagen del café */}
+                                            {prod.imagen_url ? (
+                                                <img
+                                                    src={prod.imagen_url.replace('/upload/', '/upload/w_150,h_150,c_fill,g_auto/')}
+                                                    alt={prod.nombre}
+                                                    className="w-14 h-14 object-cover rounded-2xl shadow-sm border border-gray-100 transition-transform group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-[11px] font-bold text-gray-400 border border-dashed">
+                                                    S/F
+                                                </div>
+                                            )}
+
+                                            {/* Info: Nombre, precio y stock */}
+                                            <div className="space-y-0.5">
+                                                <p className="font-bold text-gray-900 group-hover:text-amber-800 transition-colors">
+                                                    {prod.nombre}
+                                                </p>
+                                                <div className="flex items-center gap-2 text-xs font-medium">
+                                                    <span className="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md">
+                                                        ${prod.precio.toLocaleString()}
+                                                    </span>
+                                                    <span className="text-gray-400">•</span>
+                                                    <span className={`px-2 py-0.5 rounded-md ${prod.stock < 5 ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-500 bg-gray-100'}`}>
+                                                        Stock: {prod.stock} u.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {/* Botones de Acciones */}
+                                    <td className="p-4 pr-6 text-right">
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button 
+                                                onClick={() => alSeleccionar(prod)} 
+                                                className="text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-3 py-2 rounded-xl hover:bg-blue-100 transition-all"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button 
+                                                onClick={() => alBorrar(prod.id)} 
+                                                className="text-xs font-bold uppercase tracking-wider bg-red-50 text-red-500 px-3 py-2 rounded-xl hover:bg-red-100 transition-all"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
