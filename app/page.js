@@ -80,7 +80,7 @@ useEffect(() => {
       </nav>
 
       {/* 2. HERO SECTION NUEVO (Fondo claro, limpio y con estadísticas) */}
-      <header className="max-w-7xl mx-auto px-8 py-12 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <header className="w-full px-[80px]  xl:mx-auto  py-12 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
         {/* Columna Izquierda: Textos y estadísticas */}
         <div className="space-y-8">
           <div className="space-y-4">
@@ -125,17 +125,16 @@ useEffect(() => {
 
         {/* Columna Derecha: El splash/imagen del café */}
      {/* Columna Derecha: Composición 3D Centrada y Alineada sin cortes feos */}
-<div className="relative w-full h-[450px] md:h-[500px] flex items-center justify-center overflow-visible">
+<div className="relative w-full h-[350px] sm:h-[450px] md:h-[500px] flex items-center justify-center overflow-visible">
   
   {/* Sombra o mancha decorativa difuminada bien al fondo */}
   <div className="absolute w-72 h-72 bg-[#6F4E37]/5 rounded-full -z-10 blur-3xl"></div>
 
   {/* ========================================================
       CAPA 1: SPLASH DE FONDO ATRÁS (z-10)
-      Se le aplica una máscara para desvanecer el corte recto inferior
-     ======================================================== */}
+      ======================================================== */}
   <div 
-    className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[85%] md:w-[80%] z-10 anim-atras opacity-90"
+    className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[95%] sm:w-[85%] md:w-[80%] h-[85%] md:h-[90%] z-10 anim-atras opacity-90"
     style={{
       maskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)',
       WebkitMaskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)'
@@ -144,19 +143,26 @@ useEffect(() => {
     <img
       src="/coffee splash.png"
       alt="Splash de café base"
-      className="w-full h-auto object-contain drop-shadow-md select-none"
+      
+      className="w-full h-full object-cover object-bottom drop-shadow-md select-none"
     />
   </div>
 
   {/* ========================================================
       CAPA 2: EN EL FRENTE Y CENTRADO (z-30)
-      La empanada/pastel flotando justo en el medio del splash
-     ======================================================== */}
-  <div className="absolute left-1/2 bottom-1  w-[70%] md:w-[50%] z-30 anim-frente">
+      ======================================================== */}
+  {/* Ajustamos los anchos en móvil (w-[55%]) para que no tape por completo el splash */}
+ <div 
+    /* SOLUCIÓN: 
+      - En móviles (por defecto): Se centra usando left-1/2 y -translate-x-1/2 con un ancho controlado (w-[65%]).
+      - En escritorio (md:): Quitamos el translate (-translate-x-0) y restablecemos el ancho original (md:w-[50%]) para que se acomode sola a la derecha.
+    */
+    className="absolute left-1/2 -translate-x-1/2 md:-translate-x-0 bottom-1 w-[65%] md:w-[50%] z-30 anim-frente"
+  >
     <img
       src="/pngegg.png"
       alt="Pastel horneado flotando al frente"
-      className="w-full h-auto object-contain drop-shadow-[0_25px_25px_rgba(0,0,0,0.35)] select-none transition duration-300"
+      className="w-full h-auto object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.35)] select-none transition duration-300"
     />
   </div>
 
@@ -170,15 +176,15 @@ useEffect(() => {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-[#6F4E37] block mb-2 font-mono">
-                Special Online Shop
+                Tienda especial
               </span>
               <h2 className="text-3xl font-serif font-bold text-[#1A1A1A]">
-                Our Popular Products
+                Nuestros productos populares
               </h2>
             </div>
             <div>
               <Link href="/tienda" className="bg-[#1A1A1A] hover:bg-[#333333] text-white text-xs uppercase tracking-widest font-semibold px-6 py-3 rounded-md transition shadow-sm inline-block">
-                See All Products
+                nuestros productos
               </Link>
             </div>
           </div>
@@ -189,19 +195,20 @@ useEffect(() => {
               <p className="text-sm italic text-stone-400">Consultando la bodega...</p>
             </div>
           ) : productos.length === 0 ? (
-            <p className="text-center py-12 text-stone-400 italic text-sm">No hay cafés registrados en el sistema actualmente.</p>
+            <p className="text-center py-12 text-stone-400 italic text-sm">No hay productos actualmente para ofrecer.</p>
           ) : (
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {productos.map((prod) => (
                 <div key={prod.id} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition duration-300 border border-stone-100 flex flex-col justify-between">
                   <div>
                     {/* Tarjeta Gris para la imagen */}
-                    <div className="bg-[#EAEAEA] rounded-xl h-56 w-full flex items-center justify-center overflow-hidden p-4 mb-4">
+                    <div className="bg-[#EAEAEA] rounded-xl h-56 w-full flex items-center justify-center overflow-hidden  mb-4">
                       {prod.imagen_url ? (
                         <img
                           src={prod.imagen_url}
                           alt={prod.nombre}
-                          className="h-full object-contain hover:scale-105 transition duration-300"
+                          className="w-full h-full object-cover hover:scale-101 transition duration-300"
                         />
                       ) : (
                         <span className="text-6xl select-none">☕</span>
@@ -231,12 +238,13 @@ useEffect(() => {
                       href="/tienda"
                       className="bg-[#D2B48C] hover:bg-[#C1A47E] text-[#1C110E] font-medium text-xs px-4 py-2.5 rounded-md transition shadow-sm border border-[#A27B5C]/10"
                     >
-                      Add to cart
+                      añadir al carrito
                     </Link>
                   </div>
                 </div>
               ))}
             </div>
+
           )}
         </div>
       </section>
