@@ -20,7 +20,8 @@ export default function ProductosPage() {
     const [formData, setFormData] = useState({
         nombre: "",
         precio: "",
-        stock: ""
+        stock: "",
+        descripcion: ""
     });
 
     useEffect(() => {
@@ -28,7 +29,8 @@ export default function ProductosPage() {
             setFormData({
                 nombre: productoSeleccionado.nombre,
                 precio: productoSeleccionado.precio,
-                stock: productoSeleccionado.stock
+                stock: productoSeleccionado.stock,
+                descripcion: productoSeleccionado.descripcion || ""
             });
             // Si el producto ya tiene URL de texto de Cloudinary, la precargamos en la vista previa
             setPreview(productoSeleccionado.imagen_url || null);
@@ -55,8 +57,8 @@ export default function ProductosPage() {
                 await agregarProducto(datosLimpios, file);
             }
 
-            // Limpieza segura de estados post-envío
-            setFormData({ nombre: "", precio: "", stock: "" });
+            // Limpieza segura de estados post-envío de las propiedades del producto
+            setFormData({ nombre: "", precio: "", stock: "", descripcion: "" });
             setPreview(null);
             if (fileInput) fileInput.value = ""; 
             if (setProductosSeleccionado) setProductosSeleccionado(null); 
@@ -101,7 +103,7 @@ export default function ProductosPage() {
                                     </div>
                                 ) : (
                                     <div className="text-center space-y-1 p-2">
-                                        <span className="text-2xl block opacity-60">📸</span>
+                                        <span className="text-2xl block opacity-60">Imagen</span>
                                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sin vista previa</p>
                                         <p className="text-[11px] text-gray-400">Selecciona un archivo abajo</p>
                                     </div>
@@ -110,13 +112,25 @@ export default function ProductosPage() {
 
                             {/* Input Nombre */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Nombre del café</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Nombre del Producto</label>
                                 <input
                                     placeholder="Ej. Caramel Macchiato"
                                     className="w-full bg-[#FFFDF9] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-medium text-gray-800"
                                     value={formData.nombre}
                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                     required
+                                />
+                            </div>
+
+                            {/* 4. NUEVO CAMPO: Textarea para la Descripción del Producto */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Descripción</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Ingresa los detalles, notas de sabor o ingredientes..."
+                                    className="w-full bg-[#FFFDF9] border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-medium text-gray-800 resize-none block scrollbar-thin"
+                                    value={formData.descripcion}
+                                    onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                                 />
                             </div>
 
@@ -240,10 +254,11 @@ function TablaProductos({ lista, alBorrar, alSeleccionar }) {
                                     <td className="p-4 pl-6">
                                         <div className="flex items-center gap-3 sm:gap-4">
                                             {prod.imagen_url ? (
-                                                <img
-                                                    src={prod.imagen_url.replace('/upload/', '/upload/w_150,h_150,c_fill,g_auto/')}
+                                                // me carga , luego como quiero que cargue las imagenes, tamaño por el espacio que le doy 
+                                                <img 
+                                                    src={prod.imagen_url.replace('/upload/', '/upload/w_150,h_150,c_fill,g_auto/')} 
                                                     alt={prod.nombre}
-                                                    className="w-12 h-12 sm:w-14 sm:h-14 object-cover rounded-2xl shadow-sm border border-gray-100 transition-transform group-hover:scale-105"
+                                                    className=" object-cover rounded-2xl shadow-sm border border-gray-100 transition-transform group-hover:scale-105"
                                                 />
                                             ) : (
                                                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-[11px] font-bold text-gray-400 border border-dashed shrink-0">
@@ -259,10 +274,12 @@ function TablaProductos({ lista, alBorrar, alSeleccionar }) {
                                                     <span className="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md">
                                                         ${prod.precio?.toLocaleString()}
                                                     </span>
+                                                    
                                                     <span className="text-gray-300 hidden sm:inline">•</span>
                                                     <span className={`px-2 py-0.5 rounded-md ${prod.stock < 5 ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-500 bg-gray-100'}`}>
                                                         Stock: {prod.stock} u.
                                                     </span>
+                                                    <span className="text-black-300 font-bold"> {prod.descripcion}</span>
                                                 </div>
                                             </div>
                                         </div>

@@ -88,9 +88,9 @@ useEffect(() => {
               Disfruta tus <br />
               <span className="text-[#1A1A1A]">Mañanas de un Cafe</span>
             </h1>
-            <p className="text-stone-500 text-sm max-w-md leading-relaxed">
-              Porque en el mundo los aromas y la frescura comienzan con una taza de cafe acompañado de tus mejores momentos, vivelo y disfrutalo que dices, esta esperando por ti.
-            </p>
+            <p className="text-stone-500 text-sm max-w-md leading-relaxed text-[17px]">
+              Porque en el mundo los mejores momentos comienzan con el aroma y la frescura de una taza de café. Vívelo, disfrútalo y comparte la experiencia que estabas esperando.
+              </p>
           </div>
 
           {/* Botón de acción con la flecha diagonal */}
