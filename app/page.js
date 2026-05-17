@@ -7,36 +7,50 @@ export default function Home() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  let isMounted = true;
 
-    const consultarProductos = async () => {
-      try {
-        setLoading(true);
-        // Traemos los 6 productos de BD para el catálogo de abajo
-        const { data, error } = await supabase
-          .from("productos")
-          .select("*")
-          .limit(6);
+  const consultarProductos = async () => {
+    try {
+      setLoading(true);
+      console.log("🚀 Intentando conectar con Supabase...");
 
-        if (error) {
-          console.error("❌ Error de Supabase:", error.message);
-        } else if (isMounted) {
-          setProductos(data || []);
+      // ⏱️ PARACAÍDAS: Si en 5 segundos no responde, rompe el ciclo
+      const timeout = setTimeout(() => {
+        if (isMounted) {
+          console.error("⏰ Tiempo de espera agotado. Supabase no respondió.");
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("💥 Error en la consulta:", err);
-      } finally {
-        if (isMounted) setLoading(false);
+      }, 5000);
+
+      const { data, error } = await supabase
+        .from("productos")
+        .select("*")
+        .limit(6);
+
+      clearTimeout(timeout); // Cancelamos el temporizador si responde a tiempo
+
+      if (error) {
+        console.error("❌ Error de Supabase:", error.message);
+        return;
+      } 
+      
+      if (isMounted) {
+        setProductos(data || []);
       }
-    };
+    } catch (err) {
+      console.error("💥 Error en el bloque catch:", err);
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
 
-    consultarProductos();
+  consultarProductos();
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   return (
     <div className="min-h-screen bg-[#F9F6F0] text-[#2B1B17] font-sans antialiased">
