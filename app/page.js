@@ -2,70 +2,83 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase.js";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 export default function Home() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const consultarProductos = async () => {
-    try {
-      setLoading(true);
-      console.log("🚀 Intentando conectar con Supabase...");
+    const consultarProductos = async () => {
+      try {
+        setLoading(true);
+        console.log("🚀 Intentando conectar con Supabase...");
 
-      // ⏱️ PARACAÍDAS: Si en 5 segundos no responde, rompe el ciclo
-      const timeout = setTimeout(() => {
-        if (isMounted) {
-          console.error("⏰ Tiempo de espera agotado. Supabase no respondió.");
-          setLoading(false);
+        // ⏱️ PARACAÍDAS: Si en 5 segundos no responde, rompe el ciclo
+        const timeout = setTimeout(() => {
+          if (isMounted) {
+            console.error("⏰ Tiempo de espera agotado. Supabase no respondió.");
+            setLoading(false);
+          }
+        }, 5000);
+
+        const { data, error } = await supabase
+          .from("productos")
+          .select("*")
+          .limit(6);
+
+        clearTimeout(timeout); // Cancelamos el temporizador si responde a tiempo
+
+        if (error) {
+          console.error("❌ Error de Supabase:", error.message);
+          return;
         }
-      }, 5000);
 
-      const { data, error } = await supabase
-        .from("productos")
-        .select("*")
-        .limit(6);
-
-      clearTimeout(timeout); // Cancelamos el temporizador si responde a tiempo
-
-      if (error) {
-        console.error("❌ Error de Supabase:", error.message);
-        return;
-      } 
-      
-      if (isMounted) {
-        setProductos(data || []);
+        if (isMounted) {
+          setProductos(data || []);
+        }
+      } catch (err) {
+        console.error("💥 Error en el bloque catch:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      console.error("💥 Error en el bloque catch:", err);
-    } finally {
-      if (isMounted) setLoading(false);
-    }
-  };
+    };
 
-  consultarProductos();
+    consultarProductos();
 
-  return () => {
-    isMounted = false;
-  };
-}, []);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F9F6F0] text-[#2B1B17] font-sans antialiased">
 
       {/* 1. NAVBAR NUEVO (Estilo "Brewery" minimalista y claro) */}
       <nav className="bg-white/80 backdrop-blur-md px-8 py-4 flex items-center justify-between border-b border-stone-100 sticky top-0 z-50 shadow-sm">
-        {/* Logo a la izquierda */}
-        <div className="flex items-center gap-2 font-serif font-bold tracking-wide text-[#1A1A1A] text-3xl">
-          <span>☕</span> CoffeShop
+        {/* Logo a la izquierda (Le ponemos 'relative' para que controle al absolute de adentro) */}
+        <div className="relative flex items-center font-serif font-bold tracking-wide text-[#1A1A1A] text-3xl">
+
+          {/* taza de cafe ABSOLUTE (Flota por encima del Navbar sin deformarlo) */}
+          <div className="absolute -top-11 left-[-24] w-50  flex items-center justify-center overflow-hidden z-10 pointer-events-none">
+            <DotLottieReact
+              src="/coffee-logo.json"
+              loop
+              autoplay
+              className="w-full h-full object-contain"
+            />
+          </div>
+
+          {/* 👇 TEXTO CON MARGEN IZQUIERDO (Le da el espacio exacto a la taza para que no choque) */}
+          <span className="text-2xl font-sans tracking-tight pl-24">CoffeShop</span>
         </div>
 
         {/* Menú central */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600">
-          <Link href="/" className="text-[#6F4E37] font-semibold border-b-2 border-[#6F4E37] pb-1">Home</Link>
-          <Link href="/tienda" className="hover:text-[#6F4E37] transition pb-1">Product</Link>
+
+          <Link href="/tienda" className="hover:text-[#6F4E37] transition pb-1">Productos</Link>
         </div>
 
         {/* Iconos y Botón Derecho */}
@@ -79,18 +92,30 @@ useEffect(() => {
         </div>
       </nav>
 
-      {/* 2. HERO SECTION NUEVO (Fondo claro, limpio y con estadísticas) */}
-      <header className="w-full px-[80px]  xl:mx-auto  py-12 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        {/* Columna Izquierda: Textos y estadísticas */}
-        <div className="space-y-8">
+      {/* 2. HERO SECTION */}
+      {/* Añadimos 'relative' y 'overflow-hidden' para contener el fondo wave-cafe */}
+      <header className="relative w-full px-6 md:px-[80px] xl:mx-auto py-12 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center overflow-hidden bg-[#FFFDF9]">
+
+        {/* 🌊 CAPA DE FONDO, ABSOLUTA:  wave-cafe.png */}
+        <div
+          className="absolute inset-0 z-0 bg-center bg-no-repeat opacity-45 pointer-events-none mix-blend-multiply"
+          style={{
+            backgroundImage: "url('/wave-cafe.png')",
+            backgroundSize: "100% 100%"
+          }}
+        />
+
+        {/* Columna Izquierda: Textos y estadísticas (Con z-10 para ponerse encima del fondo) */}
+        <div className="space-y-8 relative z-10">
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-6xl font-sans font-bold tracking-tight text-[#1A1A1A] leading-[1.15]">
+            {/* Escalado a text-6xl / md:text-7xl con el color café de tu marca */}
+            <h1 className="text-6xl md:text-7xl font-sans font-bold tracking-tight text-[#1A1A1A] leading-[1.1]">
               Disfruta tus <br />
-              <span className="text-[#1A1A1A]">Mañanas de un Cafe</span>
+              <span className="text-bold">Mañanas con un Café</span>
             </h1>
-            <p className="text-stone-500 text-sm max-w-md leading-relaxed text-[17px]">
+            <p className="text-stone-500 max-w-md leading-relaxed text-[17px]">
               Porque en el mundo los mejores momentos comienzan con el aroma y la frescura de una taza de café. Vívelo, disfrútalo y comparte la experiencia que estabas esperando.
-              </p>
+            </p>
           </div>
 
           {/* Botón de acción con la flecha diagonal */}
@@ -105,68 +130,52 @@ useEffect(() => {
               </span>
             </Link>
           </div>
-
-          {/* Fila de Estadísticas */}
-          <div className="pt-6 grid grid-cols-3 gap-6 border-t border-stone-200 max-w-sm">
-            <div>
-              <p className="text-3xl font-bold text-[#1A1A1A]">2K+</p>
-              <p className="text-xs text-stone-400 font-medium">Reviews</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-[#1A1A1A]">3K+</p>
-              <p className="text-xs text-stone-400 font-medium">Best sales</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-[#1A1A1A]">200+</p>
-              <p className="text-xs text-stone-400 font-medium">Reviews</p>
-            </div>
-          </div>
-        </div>
+      </div>
 
         {/* Columna Derecha: El splash/imagen del café */}
-     {/* Columna Derecha: Composición 3D Centrada y Alineada sin cortes feos */}
-<div className="relative w-full h-[350px] sm:h-[450px] md:h-[500px] flex items-center justify-center overflow-visible">
-  
-  {/* Sombra o mancha decorativa difuminada bien al fondo */}
-  <div className="absolute w-72 h-72 bg-[#6F4E37]/5 rounded-full -z-10 blur-3xl"></div>
+        {/* Columna Derecha: Composición 3D Centrada y Alineada sin cortes feos */}
+        <div className="relative w-full h-[350px] sm:h-[450px] md:h-[500px] flex items-center justify-center overflow-visible">
 
-  {/* ========================================================
-      CAPA 1: SPLASH DE FONDO ATRÁS (z-10)
-      ======================================================== */}
-  <div 
-    className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[95%] sm:w-[85%] md:w-[80%] h-[85%] md:h-[90%] z-10 anim-atras opacity-90"
-    style={{
-      maskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)',
-      WebkitMaskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)'
-    }}
-  >
-    <img
-      src="/coffee splash.png"
-      alt="Splash de café base"
-      
-      className="w-full h-full object-cover object-bottom drop-shadow-md select-none"
-    />
-  </div>
+          {/* Sombra o mancha decorativa difuminada bien al fondo */}
+          <div className="absolute w-72 h-72 bg-[#6F4E37]/5 rounded-full -z-10 blur-3xl"></div>
 
-  {/* ========================================================
-      CAPA 2: EN EL FRENTE Y CENTRADO (z-30)
-      ======================================================== */}
-  {/* Ajustamos los anchos en móvil (w-[55%]) para que no tape por completo el splash */}
- <div 
-    /* SOLUCIÓN: 
-      - En móviles (por defecto): Se centra usando left-1/2 y -translate-x-1/2 con un ancho controlado (w-[65%]).
-      - En escritorio (md:): Quitamos el translate (-translate-x-0) y restablecemos el ancho original (md:w-[50%]) para que se acomode sola a la derecha.
-    */
-    className="absolute left-1/2 -translate-x-1/2 md:-translate-x-0 bottom-1 w-[65%] md:w-[50%] z-30 anim-frente"
-  >
-    <img
-      src="/pngegg.png"
-      alt="Pastel horneado flotando al frente"
-      className="w-full h-auto object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.35)] select-none transition duration-300"
-    />
-  </div>
+          {/* ========================================================
+             CAPA 1: SPLASH DE FONDO ATRÁS (z-10)
+           ======================================================== */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[95%] sm:w-[85%] md:w-[80%] h-[85%] md:h-[90%] z-10 anim-atras opacity-90"
+            style={{
+              maskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)'
+            }}
+          >
+            <img
+              src="/coffee splash.png"
+              alt="Splash de café base"
 
-</div>
+              className="w-full h-full object-cover object-bottom drop-shadow-md select-none"
+            />
+          </div>
+
+          {/* ========================================================
+              CAPA 2: EN EL FRENTE Y CENTRADO (z-30)
+             ======================================================== */}
+          {/* Ajustamos los anchos en móvil (w-[55%]) para que no tape por completo el splash */}
+          <div
+            /* SOLUCIÓN: 
+              - En móviles (por defecto): Se centra usando left-1/2 y -translate-x-1/2 con un ancho controlado (w-[65%]).
+              - En escritorio (md:): Quitamos el translate (-translate-x-0) y restablecemos el ancho original (md:w-[50%]) para que se acomode sola a la derecha.
+            */
+            className="absolute left-1/2 -translate-x-1/2 md:-translate-x-0 bottom-1 w-[65%] md:w-[50%] z-30 anim-frente"
+          >
+            <img
+              src="/pngegg.png"
+              alt="Pastel horneado flotando al frente"
+              className="w-full h-55 object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.35)] select-none transition duration-300"
+            />
+          </div>
+
+        </div>
       </header>
 
       {/* 3. SECCIÓN: OUR POPULAR PRODUCTS (Tu catálogo dinámico de Supabase) */}
