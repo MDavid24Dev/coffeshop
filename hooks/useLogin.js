@@ -22,10 +22,23 @@ export function useLogin(){
      //almacenando en una variable en data
      const data = await loginSupabase(email,password);
 
-     if(data){
-        console.log("¡Acceso concedido!"); //vemos que ya tiene acceso
-        router.push("/"); // lo enviamos a la ruta del home
-     }
+     // validacion de ingreso al usuario por metadatos cache traido midelware
+     if (data && data.user) {
+    console.log("¡Acceso concedido!", data.user);
+    
+    // Extraemos el rol desde los metadatos guardados en Supabase
+    const userRole = data.user.user_metadata?.role || 'client';
+    
+    if (userRole === 'admin' || userRole === 'support'|| userRole === 'client') {
+        // Si es Admin o Soporte, lo mandamos directo al módulo de gestión de inventario
+        //router.push("/productos");
+    } else {
+        // Si es un cliente común, lo mandamos a la tienda comercial a comprar café
+        //router.push("/tienda");
+        router.push("/productos");
+    }
+}
+
 
     }catch (error){
        

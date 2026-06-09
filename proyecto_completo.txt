@@ -1,0 +1,1446 @@
+﻿========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\api\checkout\route.js
+========================================
+
+
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export async function POST(request) {
+    try {
+        const { items } = await request.json();
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            line_items: items,
+            mode: "payment",
+            success_url: `${request.headers.get("origin")}/tienda?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${request.headers.get("origin")}/tienda?canceled=true`,
+        });
+
+        // MANERA DIFERENTE: En lugar de JSON, devolvemos la URL para que el front la use
+        return NextResponse.json({ url: session.url });
+    } catch (error) {
+        console.error("ERROR:", error.message);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\login\page.js
+========================================
+"use client" // Se ejecuta en el navegador porque el usuario va a interactuar (clics, teclado)
+
+import { useLogin } from "@/hooks/useLogin" // Traemos el "cerebro" que se acaba de programar
+
+export default function LoginPage() {
+
+    // Extraemos las herramientas de nuestro cerebro (Hook)
+    // Sacamos las funciones para llenar las cajas y la funciÃ³n de enviar
+    const { setEmail, setPassword, handleLogin, loading } = useLogin();
+
+    return (
+        <main className="min-h-screen w-full flex items-center bg-amber-500">
+            <div className="mx-auto px-4 w-full max-w-6xl">
+                {/* CORRECCIÃ“N: Agregada la clase grid y removido el fondo azul de prueba */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-center">
+
+                    {/* Columna Izquierda: Formulario */}
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h1 className="font-black text-green-700 text-2xl mb-4">â˜• Bienvenido de nuevo</h1>
+                        <p className="mb-4 text-gray-600">Ingresa tus datos</p>
+
+                        <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
+                            <div>
+                                <label className="block mb-1 font-medium">Correo ElectrÃ³nico:</label>
+                                <input className="w-full border p-2 rounded"
+                                    type="email"
+                                    placeholder="tu@correo.com"
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block mb-1 font-medium">ContraseÃ±a:</label>
+                                <input className="w-full border p-2 rounded"
+                                    type="password"
+                                    placeholder="******"
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    padding: "12px",
+                                    backgroundColor: loading ? "#ccc" : "#6F4E37",
+                                    color: "white",
+                                    cursor: loading ? "not-allowed" : "pointer",
+                                    border: "none",
+                                    borderRadius: "5px"
+                                }}
+                            >
+                                {loading ? "Validando credenciales..." : "Ingresar"}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Columna Derecha: Contenido extra */}
+                    <div className="bg-green-700 p-6 rounded-lg text-white h-full justify-center items-center">
+                        <h2 className=" flex  justify-center font-bold text-xl mb-2">Columna 2</h2>
+                        <p>Contenido del lado derecho</p>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    )
+}
+
+/**
+
+* onChange={(e) => setNombre(e.target.value)}: Se usa este "cable" para ver en tiempo real la carga de este como RAM los datos de forma veloz
+ 
+* onSubmit={handleLogin}: //para envio de este formulario con boton o enter acepte ambas condiciones
+ 
+* disabled={loading} // para evitar que si se caiga la red no sobre sature el limite de carga en el ingreso
+
+*/
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\productos\page.js
+========================================
+"use client"
+
+import { useProducto } from "@/hooks/useProductos";
+import { useState, useEffect } from "react";
+
+export default function ProductosPage() {
+    const {
+        productos,
+        loading,
+        agregarProducto,
+        borrarProducto,
+        editarProducto,
+        productoSeleccionado,
+        setProductosSeleccionado // ðŸ‘ˆ IMPORTANTE: Agregamos esta funciÃ³n aquÃ­
+    } = useProducto();
+
+    const [formData, setFormData] = useState({
+        nombre: "",
+        precio: "",
+        stock: ""
+    });
+
+    useEffect(() => {
+        if (productoSeleccionado) {
+            setFormData({
+                nombre: productoSeleccionado.nombre,
+                precio: productoSeleccionado.precio,
+                stock: productoSeleccionado.stock
+            });
+        }
+    }, [productoSeleccionado]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // Capturamos el archivo del input (necesitarÃ¡s aÃ±adir el input al HTML abajo)
+        const file = e.target.foto?.files[0];
+
+        const datosLimpios = {
+            ...formData,
+            precio: parseFloat(formData.precio) || 0,
+            stock: parseInt(formData.stock) || 0
+        };
+
+        if (productoSeleccionado) {
+            await editarProducto(productoSeleccionado.id, datosLimpios, file);
+        } else {
+            await agregarProducto(datosLimpios, file);
+        }
+
+        setFormData({ nombre: "", precio: "", stock: "" });
+        if (e.target.foto) e.target.foto.value = ""; // Limpia el input de archivo
+        setProductosSeleccionado(null); // Ahora sÃ­ funcionarÃ¡ porque la importamos arriba
+    };
+
+    return (
+
+        <div className="bg-amber-300 p-8">
+            <div className="grid md:grid-cols-2 gap-5">
+              {/* COLUMNA IZQUIERDA: Formulario */}
+            <div>
+                <h1 className="text-2xl font-bold mb-4 text-center md:text-left">
+                    Gestionar Productos
+                </h1>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-lg shadow-md">
+                    <input
+                        placeholder="Nombre"
+                        className="border p-2 rounded"
+                        value={formData.nombre}
+                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                        required
+                    />
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <input
+                            type="number"
+                            placeholder="Precio"
+                            className="border p-2 rounded"
+                            value={formData.precio}
+                            onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                            required
+                        />
+                        <input
+                            type="number"
+                            placeholder="Stock"
+                            className="border p-2 rounded"
+                            value={formData.stock}
+                            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                            required
+                        />
+                    </div>
+
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1">Imagen del Producto</label>
+                        <input
+                            name="foto"
+                            type="file"
+                            accept="image/*"
+                            className="border p-1 text-sm bg-gray-50 rounded"
+                        />
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button className={`flex-1 p-2 rounded text-white font-bold ${productoSeleccionado ? 'bg-green-600' : 'bg-blue-500'}`}>
+                            {loading ? "Cargando..." : (productoSeleccionado ? "Actualizar" : "Agregar")}
+                        </button>
+                    
+                        {productoSeleccionado && (
+                            <button
+                                type="button"
+                                onClick={() => { setProductosSeleccionado(null); setFormData({ nombre: "", precio: "", stock: "" }); }}
+                                className="px-4 text-gray-500 text-sm underline hover:text-red-500"
+                            >
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
+
+                <div>
+                <h2 className="text-xl font-semibold mb-4 text-center">Inventario Actual</h2>
+
+                <TablaProductos
+                    lista={productos}
+                    alBorrar={borrarProducto}
+                    alSeleccionar={setProductosSeleccionado} // ðŸ‘ˆ CONECTAMOS EL CABLE AQUÃ
+                />
+            </div>
+            </div>
+            {/*componente padre */}
+        </div>
+    );
+}
+
+// TU COMPONENTE DE TABLA (Se queda igual, pero ahora recibe alSeleccionar)
+function TablaProductos({ lista, alBorrar, alSeleccionar }) {
+    return (
+        <div className="bg-white shadow-md rounded-lg overflow-hidden border">
+            <table className="w-full text-left">
+                <thead className="bg-gray-100 border-b">
+                    <tr>
+                        <th className="w-[10%] font-bold text-gray-700">Producto</th>
+                        <th className=" w-[80%] text-center font-bold text-gray-700">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {lista.map((prod) => (
+                        <tr key={prod.id} className="border-b hover:bg-gray-50">
+                            <td className="p-4">
+                                {/* Contenedor para alinear imagen y texto */}
+                                <div className="flex items-center gap-4">
+
+                                    {/* 1. LA IMAGEN: Solo se muestra si existe la URL */}
+                                    {prod.imagen_url ? (
+                                        <img
+                                            /* Este truco aÃ±ade parÃ¡metros a la URL:
+                                               w_200: Redimensiona a 200px (suficiente para una miniatura)
+                                                c_fill: Recorta para que encaje
+                                               g_auto: Enfoca lo importante (el cafÃ©) automÃ¡ticamente
+                                             */
+                                            src={prod.imagen_url.replace('/upload/', '/upload/w_150,h_150,c_fill,g_auto/')}
+                                            alt={prod.nombre}
+                                            //style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                            className="w-12 h-12 object-cover rounded shadow-sm border"
+                                        />
+                                    ) : (
+                                        /* Un cuadro gris por si no hay foto */
+                                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-[10px] text-gray-400">
+                                            S/F
+                                        </div>
+                                    )}
+
+                                    {/* 2. LOS TEXTOS: Nombre, precio y stock */}
+                                    <div>
+                                        <p className="font-bold text-gray-800">{prod.nombre}</p>
+                                        <p className="text-sm text-gray-500">
+                                            ${prod.precio.toLocaleString()} â€” Stock: {prod.stock}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {/* ... el resto de tus botones de acciones se quedan igual ... */}
+                            <td className="p-4 text-center flex justify-center gap-3">
+                                <button onClick={() => alSeleccionar(prod)} className="text-blue-600 hover:underline">
+                                    Editar
+                                </button>
+                                <button onClick={() => alBorrar(prod.id)} className="text-red-500 hover:underline">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\registro_usuario\page.js
+========================================
+"use client"; 
+// para que el usuario la use se usa este comando si es frontend
+
+import { useRegistro } from "@/hooks/useRegistro"; // aqui para que pueda enviar los datos temporalmente "Metadatos"
+
+export default function RegistroUsuario(){
+    //extraemos las herramientas del instructivo controlador "Hook" que retornamos antes
+    const{
+        setNombre,
+        setEmail,
+        setPassword,
+        handleRegistro,
+        loading
+    } = useRegistro();
+
+  return(
+
+   <main style={{ maxWidth: "400px", margin: "0 auto", padding: "2rem" }}>
+      <h1>Registro de Usuario</h1>
+      <p>Ingresa tus datos para empezar</p>
+
+      <form onSubmit={handleRegistro}>
+        <div style={{ marginBottom: "1rem" }}>
+          <label>Nombre Completo:</label>
+          <input 
+            type="text" 
+            placeholder="ingresa tu nombre"
+            onChange={(e) => setNombre(e.target.value)} 
+            required 
+            style={{ width: "100%", display: "block" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <label>Correo ElectrÃ³nico:</label>
+          <input 
+            type="email" 
+            placeholder="correo@ejemplo.com"
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+            style={{ width: "100%", display: "block" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <label>ContraseÃ±a:</label>
+          <input 
+            type="password" 
+            placeholder="MÃ­nimo 6 caracteres"
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+            style={{ width: "100%", display: "block" }}
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ width: "100%", padding: "0.5rem", cursor: loading ? "not-allowed" : "pointer" }}
+        >
+          {loading ? "Registrando..." : "Crear Cuenta"}
+        </button>
+      </form>
+    </main>
+
+  );
+
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\tienda\page.js
+========================================
+"use client"
+import { useProducto } from "@/hooks/useProductos";
+import { useCarrito } from "@/hooks/useCarrito";
+import { useStripe } from "@/hooks/useStripe";
+import { useState,useEffect } from "react";
+import { useVentaStripe } from "@/hooks/useVentaStripe";
+
+
+export default function TiendaPage() {
+    const { productos, loading } = useProducto();
+    // hook del carrito
+    const { carrito, agregaAlCarrito, totalCompra, vaciaCarrito, eliminaDelCarrito } = useCarrito();
+    // AquÃ­ usamos tu hook de Stripe
+    const { iniciarPago, procesando } = useStripe();
+    const [montado, setMontado] = useState(false);
+    const { registrarPedidoCompleto } = useVentaStripe(vaciaCarrito); // aqui le decimos aqui esta registrar pedido dentro de este importado
+  
+  useEffect(() => {
+    setMontado(true);
+    const query = new URLSearchParams(window.location.search);
+    const data = localStorage.getItem("carrito");
+    const carritoReal = data ? JSON.parse(data) : [];
+
+    const totalReal = carritoReal.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+
+    // CASO: PAGO EXITOSO
+    if (query.get('success') && carritoReal.length > 0) {
+        console.log("ðŸ’° Detectado Ã©xito en Stripe. Procesando...");
+        registrarPedidoCompleto(carritoReal, 'pagado',totalReal);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (query.get('canceled')) {
+        console.log("âŒ Detectado pago cancelado.");
+        registrarPedidoCompleto(carritoReal, 'cancelado',totalReal);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    // se monta solo para que no me traiga mas productos
+}, []);
+
+if (!montado) return null;
+
+    return (
+        <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-gray-50 min-h-screen">
+
+            {/* 1. SECCIÃ“N DE PRODUCTOS */}
+            <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loading ? (
+                    <div className="col-span-full text-center py-10">
+                        <p className="text-orange-800 animate-pulse font-medium">Preparando el menÃº...</p>
+                    </div>
+                ) : (
+                    productos.map((prod) => (
+                        <div key={prod.id} className="bg-white border border-gray-100 p-5 rounded-xl shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                            <div>
+                                <h3 className="font-bold text-lg text-gray-800">{prod.nombre}</h3>
+                                <p className="text-gray-500 text-sm mb-4 line-clamp-2">{prod.descripcion}</p>
+                                <p className="text-2xl font-bold text-orange-900">${prod.precio.toLocaleString()}</p>
+                            </div>
+                            <button
+                                onClick={() => agregaAlCarrito(prod)}
+                                className="mt-5 bg-orange-800 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-900 transition-colors"
+                            >
+                                Agregar al Carrito
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* 2. RESUMEN DEL PEDIDO ÃšNICO */}
+            <aside className="md:col-span-1">
+                <div className="border border-orange-100 p-6 rounded-2xl bg-white shadow-xl h-fit sticky top-6">
+                    <h2 className="font-bold text-xl mb-6 text-orange-950 flex items-center justify-between">
+                        ðŸ›’ Tu Pedido
+                        <span className="bg-orange-100 text-orange-800 text-xs py-1 px-3 rounded-full">
+                            {carrito.length}
+                        </span>
+                    </h2>
+
+                    <div className="space-y-4 mb-6 max-h-[50vh] overflow-y-auto pr-2">
+                        {carrito.length === 0 ? (
+                            <p className="text-gray-400 text-center py-4 italic">El carrito estÃ¡ vacÃ­o</p>
+                        ) : (
+                            carrito.map(item => (
+                                <div key={item.id} className="flex justify-between items-start border-b border-gray-50 pb-3">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-gray-700 text-sm">{item.nombre}</span>
+                                        <span className="text-gray-400 text-xs">Cant: {item.cantidad}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-gray-800 text-sm">
+                                            ${(item.precio * item.cantidad).toLocaleString()}
+                                        </span>
+                                        <button
+                                            onClick={() => eliminaDelCarrito(item.id)}
+                                            className="text-red-400 hover:text-red-600 transition"
+                                            title="Eliminar"
+                                        >
+                                            Ã—
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {carrito.length > 0 && (
+                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                            <div className="flex justify-between items-center font-bold text-xl text-orange-950">
+                                <span>Total:</span>
+                                <span>${totalCompra.toLocaleString()}</span>
+                            </div>
+
+                            {/* BOTÃ“N CONECTADO A STRIPE */}
+                            <button
+                                onClick={() => iniciarPago(carrito)}
+                                disabled={procesando}
+                                className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all ${procesando
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
+                                    }`}
+
+                            >
+                                {procesando ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Cargando...
+                                    </span>
+                                ) : 'Pagar con Stripe'}
+                            </button>
+
+                            <button
+                                onClick={vaciaCarrito}
+                                className="w-full text-gray-400 text-xs hover:text-red-500 transition hover:underline"
+                            >
+                                Vaciar carrito completo
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </aside>
+        </div>
+    );
+}
+
+{/**  // Ahora recibe 'carritoParaDescontar' como parÃ¡metro
+const registrarPedidoEstado = async (carritoParaDescontar, estadoFinal) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // 1. Insertamos el pedido en la base de datos
+    const { data: pedido, error } = await supabase
+        .from('pedido')
+        .insert([{
+            usuario_id: user.id,
+            estado: estadoFinal,
+            total: totalCompra
+        }])
+        .select()
+        .single();
+
+    if (error) return console.error("Error en Supabase:", error);
+
+    // 2. LÃ³gica condicional segÃºn el estado
+    if (estadoFinal === 'pagado') {
+        // Solo descontamos si el pago fue exitoso
+        for (const item of carritoParaDescontar) {
+            // Traemos el stock actual para evitar errores
+            const { data: producto } = await supabase
+                .from('productos')
+                .select('stock')
+                .eq('id', item.id)
+                .single();
+
+            if (producto) {
+                await supabase
+                    .from('productos')
+                    .update({ stock: producto.stock - item.cantidad })
+                    .eq('id', item.id);
+            }
+        }
+        
+        vaciaCarrito();
+        localStorage.removeItem("carrito"); // Limpieza total
+        alert("âœ… Â¡Venta confirmada! El stock ha sido actualizado en CoffeShop.");
+    } else {
+        // Si fue cancelado, solo avisamos al usuario
+        alert("âŒ El pago fue cancelado. El pedido se registrÃ³ como NO PAGADO.");
+    }
+}; */}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\layout.js
+========================================
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import Script from "next/script"; //se importa para usar esta url como medio de verificacion
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col " >
+        {children}
+        {/* ponemos el script tercero para que nos capture los pagos despues de que el
+         cliente de en pagar */}
+        
+
+      </body>
+    </html>
+  );
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\app\page.js
+========================================
+"use client";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase.js"; //trayendo variables de entorno
+
+export default function Home() {
+
+ //0ï¸âƒ£ ejecuta esta funcion y almacena en productos 
+ const productos = useSupabase();
+  //luego retorna y sigue por el retorn del Home
+  
+  /* me muestra en pantalla */
+  return (
+    <div style={{ padding: '50px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+      <h1 style={{ color: '#3e2723' }}>CoffeShop â˜•</h1>
+      <p>El error 500 deberÃ­a haber desaparecido.</p>
+      <p>Mira la <b>consola del navegador (F12)</b> para confirmar la conexiÃ³n.</p>
+    </div>
+  );
+}
+
+/* funcion logica de supabase db */
+function useSupabase(){
+   // 2. FunciÃ³n de prueba para la base de datos
+  const checkSupabase = async () => {
+    try {
+      const { data, error } = await supabase.from('productos').select('*');
+      
+      if (error) {
+        console.log("âŒ Error de Supabase:", error.message);
+      } else {
+        console.log("âœ… Â¡ConexiÃ³n exitosa! Usuarios:", data);
+      }
+    } catch (err) {
+      console.log("ðŸ’¥ Error inesperado:", err);
+    }
+  };
+
+  // 3. Efecto para ejecutar la prueba al cargar
+  useEffect(() => {
+    checkSupabase();
+
+  }, []);
+
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useCarrito.js
+========================================
+"use client" // para usar con el cliente servidor supabase y navegador mesero
+
+import { useState, useEffect } from "react" // para manejar los datos temporalmente RAM herramientas (datos que cambian, ejecutar algo automaticamente)
+
+export const useCarrito = () =>{
+ 
+  const [carrito, setCarrito] = useState ([]); //aqui almaceno los productos dandolo vacio porque el usuario aun no ha escogido nada
+
+  //1. cargar el carrito para guardar al iniciar
+  useEffect (()  =>{
+ 
+    const guardado = localStorage.getItem("carrito");
+    if (guardado) setCarrito(JSON.parse(guardado));
+
+  }, [] ); //aqui ya empiezo almacenar
+
+  //2. Guardar en el localStore cuando este va cambiando
+  useEffect (() => {
+    // evitamos que nos borre el localStore del carrito los items de este
+    if(carrito.length > 0){
+      localStorage.setItem("carrito",JSON.stringify(carrito)); //aqui estoy actualizando el carrito nuevamente
+    }
+  }, [carrito] );
+
+  //3. funcion de aÃ±adir productos Agrega
+  const agregaAlCarrito = (producto) =>{
+   setCarrito((prev) => {
+      //Se revisa si ya esta colocado anteriormente al carrito
+      const existe = prev.find((item) => item.id === producto.id);
+
+      if(existe){
+       //si existe le sumamos uno a la cantidad
+       return prev.map((item) =>
+        item.id === producto.id ? { ...item, cantidad:item.cantidad +1} : item
+     );
+    }
+    // si es nuevo le sumamos 1 a la cantidad
+    return [...prev, {...producto,cantidad: 1}];
+   })
+  };
+
+  // FunciÃ³n que resta uno o quita si llega a cero
+  const eliminaDelCarrito = (id) => {
+    setCarrito((prev) => {
+      // 1. Buscamos el producto en la lista
+      const productoExistente = prev.find((item) => item.id === id);
+
+      // 2. Si la cantidad es mayor a 1, solo restamos una unidad
+      if (productoExistente && productoExistente.cantidad > 1) {
+        return prev.map((item) =>
+          item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
+        );
+      }
+
+      // 3. Si solo queda 1 (o por seguridad), lo borramos por completo
+      return prev.filter((item) => item.id !== id);
+    });
+  };
+ 
+  //calcular total de la compra del carrito
+  const totalCompra = carrito.reduce( ( acc, item ) => acc + (item.precio * item.cantidad ), 0 );
+
+  //vaciamos el carro
+  const vaciaCarrito = () => setCarrito ( [] );
+
+  return {
+   carrito,
+   agregaAlCarrito,
+   eliminaDelCarrito,
+   totalCompra,
+   vaciaCarrito
+  };
+
+};
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useLogin.js
+========================================
+"use client" //aqui el usuario navegara con el cerebro "validando los datos"
+
+import { useState } from "react" //este nos sirve como cajas vacias 
+import { loginSupabase } from "@/services/auth/loginSupabase" // traemos esa conexion de servicio que nos valida
+import { useRouter } from "next/navigation" // enviamos al usuario al punto despues del ingreso
+
+export function useLogin(){
+
+  const [email, setEmail] = useState(""); // paso datos de estos en vacio
+  const [password, setPassword] = useState(""); // paso datos en vacio
+  const [loading, setLoading] = useState(false); //caja de carga en falso sin carga aun
+
+  const router = useRouter(); // creamos nuestro estado de carga la variable router a un punto 
+
+  const handleLogin = async (e) => {
+  
+    e.preventDefault();  //evitamos que la pagina se cargue
+    setLoading(true); //ya empezamos a pasar los datos en estado de carga
+
+    try{
+     //llamamos a la funcion de supabase para poder validar los datos en LoginSupabase
+     //almacenando en una variable en data
+     const data = await loginSupabase(email,password);
+
+     if(data){
+        console.log("Â¡Acceso concedido!"); //vemos que ya tiene acceso
+        router.push("/"); // lo enviamos a la ruta del home
+     }
+
+    }catch (error){
+       
+      alert(error.message);  //aqui valida que tanto correo o contraseÃ±a frikis
+
+    }finally{
+      setLoading(false); // pasamos para decir que ya no estamos cargando
+    }
+
+  }
+
+  //pasamos al apartado de vista estos datos para usarlos
+  return {
+   setEmail,
+   setPassword,
+   handleLogin,
+   loading
+  };
+
+}//salida de la funcion de Login
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useProductos.js
+========================================
+"use client" //este corre en el navegador el adminitrador que maneja todo cuando esta en frontend con el
+
+import { useState, useEffect } from "react";
+import { subirImagen } from "@/services/cloudinary"
+
+//llamar mis funciones del crudProductos
+
+import {
+    crearProducto,
+    obtenerProducto,
+    eliminarProducto,
+    actualizarProducto
+} from "@/services/productos/crudProductos"
+import { supabase } from "@/lib/supabase";
+import { refresh } from "next/cache";
+
+export function useProducto(){
+    //1. donde vamos almacenar productos al sistema
+    const [productos, setProductos] =useState([]);
+
+    //2. caja donde el sistema sabe si esta cargando los datos
+    const [loading, setLoading] = useState(false);
+
+    //3. caja de editar para modificar el que se seleccione por el ID
+    const [productoSeleccionado, setProductosSeleccionado] = useState (null);
+
+    // Aqui para traer los productos que hay
+    const cargaTodo = async () => {
+        setLoading(true);
+        try{
+          const data = await obtenerProducto();
+          setProductos(data); //se llenan los datos
+        }catch(error){
+           alert(error.message);
+        }finally{
+            setLoading(false);
+        }
+    };
+ 
+    //hace que cargue al usuario los datos de los productos
+    useEffect(() => {
+        cargaTodo();
+    }, []);
+
+    //AgregarProducto + cloudinary
+    const agregarProducto = async (datos, archivo) => {
+  setLoading(true);
+  try {
+    let urlImagen = "";
+
+    // Si el administrador seleccionÃ³ una foto, la subimos primero
+    if (archivo) {
+      const { subirImagen } = await import("@/services/cloudinary"); 
+      urlImagen = await subirImagen(archivo);
+    }
+
+    // Guardamos en Supabase con el link (o vacÃ­o si no hubo foto)
+    await crearProducto({ ...datos, imagen_url: urlImagen });
+    await cargaTodo();
+  } catch (error) {
+    alert("Error al crear: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+    //borrar producto Delete
+    const borrarProducto = async (id) =>{
+        if(!confirm("Esta usted seguro de borrar el producto?")) return;
+     
+        setLoading(true);
+        try{
+          await eliminarProducto(id);
+          await cargaTodo(); //se recarga todo y se borra por el anterior linea
+        }catch(error){ 
+          alert(error.message); 
+        }finally{
+          setLoading(false); // ya deja de cargar los datos
+        }
+    };
+
+    // modificar Actulizar update productos
+
+   const editarProducto = async (id, nuevosDatos, archivo) => {
+  setLoading(true);
+  try {
+    let urlImagen = productoSeleccionado.imagen_url; // Mantenemos la foto actual
+
+    // Si se eligiÃ³ una foto NUEVA, la reemplazamos en Cloudinary
+    if (archivo) {
+      const { subirImagen } = await import("@/services/cloudinary");
+      urlImagen = await subirImagen(archivo);
+    }
+
+    await actualizarProducto(id, { ...nuevosDatos, imagen_url: urlImagen });
+    setProductosSeleccionado(null);
+    await cargaTodo();
+  } catch (error) {
+    alert("Error al actualizar: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+    //se pasa todas estas herramientas a el Frontend para usarlas
+    return{
+      productos,
+      loading,
+      productoSeleccionado,
+      setProductosSeleccionado,
+      agregarProducto,
+      borrarProducto,
+      editarProducto,
+      refrescar: cargaTodo
+    };
+
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useRegistro.js
+========================================
+"use client" 
+// se usa para ejecutar en el navegador de cliente
+
+// hooks/useRegistro.js "estado de registro Metadatos temporales Memoria Ram"
+
+import { useState } from "react"; 
+//coge los metadatos en temporales para usarlos  cajas con datos no mas
+import { registroSupabase } from "@/services/auth/registroSupabase";   
+// los envio a el registro par cargarlos a mi db de supabase
+import { useRouter } from "next/navigation"; 
+// paso al usuario para que pase a la pagina como rutas
+
+export function useRegistro(){
+   //1. coger cajitas con datos temporales (memoria de estos datos)
+    
+   //variable nombre como caja vacia se crea en todos
+   const [nombre, setNombre] = useState("");
+   const [email, setEmail] = useState("");
+   const [password, setPassword] = useState("");
+   const [loading, setLoading] = useState(false);
+
+   //variable de router para poder enviar al usuario a un punto
+   const router = useRouter();
+
+   // 2. "con handle envio estos datos a mi db 
+   // en registro "
+
+   const handleRegistro = async (e) => {
+    e.preventDefault();  // e es detener la pagina para enviar datos y que no se recargue
+    setLoading(true);    // activa el estado de carga para enviarlos.
+   
+    try{
+        //llamar el servicio para enviarle los estados de estas cajas
+        // de registro en la db
+        // aqui creamos una caja resultado
+        const resultado = await registroSupabase (nombre, email, password);
+        // luego vamos nuestro servicio con los datos que estan en ()
+
+        if(resultado){
+            //si el registro es exitoso lo enviamos a la pagina enrutandolo
+            router.push("/");
+            console.log("El usuario ya esta registrado exitosamente");
+        }
+
+    }catch (error){ 
+      alert("hubo un error al enviar: " + error.message);
+    } finally{
+
+      setLoading(false); // ya dejamos de estar cargando datos de carga
+    }
+  };
+  
+    //enviamos esto al frontend para que esto se pueda usar 
+    return{
+        nombre, setNombre,
+        email, setEmail,
+        password, setPassword,
+        loading,
+        handleRegistro
+    }
+}
+
+
+  
+
+
+
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useStripe.js
+========================================
+import { useState } from 'react';
+
+export const useStripe = () => {
+    const [procesando, setProcesando] = useState(false);
+
+    const iniciarPago = async (carrito) => {
+        setProcesando(true);
+        try {
+            const itemsParaStripe = carrito.map(item => ({
+                price_data: {
+                    currency: 'cop',
+                    product_data: {
+                        name: item.nombre,
+                        description: item.descripcion && item.descripcion.trim() !== ""
+                            ? item.descripcion
+                            : "Producto de la tienda",
+                    },
+                    unit_amount: Math.round(item.precio * 100),
+                },
+                quantity: item.cantidad,
+            }));
+
+            const res = await fetch("/api/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items: itemsParaStripe }),
+            });
+
+            const data = await res.json();
+
+            if (data.url) {
+                // Esto es lo que hace que la pantalla cambie sÃ­ o sÃ­
+                window.location.assign(data.url);
+            } else {
+                alert("El servidor no devolviÃ³ una URL vÃ¡lida de Stripe");
+            }
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Error en el servidor");
+            }
+
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Error: " + error.message);
+        } finally {
+            setProcesando(false);
+        }
+    };
+
+    return { iniciarPago, procesando };
+};
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\hooks\useVentaStripe.js
+========================================
+import { 
+    getUsuarioActual, 
+    insertarPedido, 
+    registrarCompra, 
+    Factura, 
+    descontarStock 
+} from "@/services/ventas/ventas.js";
+
+export const useVentaStripe = (vaciarCarrito) => {
+
+    const registrarPedidoCompleto = async (carritoReal, estadoFinal, totalCalculado) => {
+        if (!carritoReal?.length) return;
+
+        try {
+            // Pasos lÃ³gicos separados y digeribles
+            const user = await getUsuarioActual();
+            const pedido = await insertarPedido(user.id, estadoFinal, totalCalculado);
+
+            if (estadoFinal === 'pagado') {
+                const query = new URLSearchParams(window.location.search);
+                const sesionId = query.get('session_id');
+
+                // EjecuciÃ³n de subtareas
+                await registrarCompra(pedido.id, sesionId);
+                await Factura(pedido.id, carritoReal);
+                await descontarStock(carritoReal);
+
+                // FinalizaciÃ³n
+                finalizarVenta();
+            }
+        } catch (error) {
+            manejarError(error);
+        }
+    };
+
+    // Funciones de soporte internas para no ensuciar el flujo principal
+    const finalizarVenta = () => {
+        vaciarCarrito();
+        localStorage.removeItem("carrito");
+        alert("âœ… Venta procesada correctamente.");
+    };
+
+    const manejarError = (error) => {
+        console.error("âŒ Error en el motor de ventas:", error.message);
+        alert("Hubo un problema: " + error.message);
+    };
+
+    return { registrarPedidoCompleto };
+};
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\lib\supabase.js
+========================================
+ /*
+ Elementos que podemos ver aqui en / Lib
+  Configuraciones
+  Conexiones
+  Helpers
+ */
+
+  //CONEXION DE SUPABASE 
+
+  import {createClient} from '@supabase/supabase-js'; //crea conexion a supabase importandolo "Llamando db"
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL; //Lee URL de destino ðŸ›¤ï¸ðŸ”’ con process
+
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; // Lee, la llave de esta DbðŸ”‘ con process
+
+  // crea el cliente con los datos de validacion con lo parametros de entrada de las variables 
+  // cargadas de la conexion
+  export const supabase = createClient(supabaseUrl,supabaseAnonKey); 
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\services\auth\loginSupabase.js
+========================================
+import { supabase } from "@/lib/supabase"; // conexion puente cable supabase db
+
+//validar entradas LOGIN
+
+export async function loginSupabase(email,password) {
+    
+    //1.se valida si le estan dando datos a las cajas con los datos anteriormente registrados
+    if(!email || !password){
+       throw new Error("Por favor, ingresa email o contraseÃ±a no pueden quedar vacios");
+    }
+
+    //2. Intentamnos cargar datos de Supabase
+    const {data, error} = await supabase.auth.signInWithPassword({
+      email: email.trim(), //con trim, hacemos que los espacio caracteres no se cuenten ej. junx@gmail.com
+      password: password, //traemos la misma para comparar
+    });
+
+    //3. validamos la respuesta es con el error
+    if(error){
+
+        if (error.message == "Invalid login credentials"){
+           throw new Error("El correo o contraseÃ±a no son validos");
+        }
+        // otros errores de (servidor, conexion, etc.)
+        throw new Error(error.message);
+    }
+    
+    // si todo esta Okey se envia los datos del usuario
+    return data;
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\services\auth\registroSupabase.js
+========================================
+import { supabase } from "@/lib/supabase"; // conexion puente cable supabase db
+
+//Crear cuentas nuevas
+
+export async function registroSupabase (nombre, email, password) { 
+  //datos que vamos a exportar de registro 
+  
+  // 1. Crear usuario en la tabla de AutenticaciÃ³n (Sistema de Supabase) Auth.user
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  
+  if (error) { 
+    console.error("Error en Auth:", error.message);
+    throw new Error(error.message); // no permite crear el registro en Auth
+  }
+
+  // 2. Guardar los datos del perfil en tabla de usuarios
+  // se usa el mismo id del auth a usuarios
+  const { error: dbError } = await supabase.from("usuarios").insert({ 
+    id: data.user.id,
+    nombre: nombre,
+    correo: email,
+    rol: "cliente"
+  });
+
+  if (dbError) {
+    console.error("Error al insertar en tabla usuarios:", dbError.message);
+    throw new Error("Usuario creado, pero no se pudo guardar el perfil.");
+  }
+
+  return data;
+ } 
+
+
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\services\productos\crudProductos.js
+========================================
+import { supabase } from "@/lib/supabase"; // puente de conexion con supabase como un todo 
+
+// 1. paso crear un formulario para llenar datos a la db CREAR Producto
+
+export async function crearProducto(nuevoProducto) {
+    const {data, error} = await supabase 
+    .from ("productos") //apuntando a la tabla de productos hecha en supabase
+    .insert([nuevoProducto]); //llenar los datos de este producto
+
+    if (error){
+        throw new Error ("Error al guardar el producto: " + error.message);
+    }
+    return data; // enviamos los datos a la tabla
+}
+
+//2. para Leer "Productos (Read)"
+
+export async function obtenerProducto(){
+
+    const {data,error} = await supabase 
+     .from("productos")
+     .select("*") //traer todo las columnas del producto
+     .order("created_at",{ascending:false}); //traer los mas nuevos organizador esta linea
+
+     if(error){
+      throw new Error("No se pudo traer los productos: " + error.message);
+     }
+     return data; //nos da los datos exitosamente
+}
+
+//3. Para Eliminar Producto por el UUDI Delete
+
+export async function eliminarProducto(id){
+    const {error} = await supabase
+    .from("productos")
+    .delete()
+    .eq("id",id); // solo se elimina por el ID que coincida y sea unico igual
+    if(error){
+       throw new Error ("No se puede Borrar: " + error.message); 
+    }
+}
+
+//4.Actualizar Producto
+
+export async function actualizarProducto(id,actualizar){
+   const {data, error} = await supabase
+   .from ("productos")
+   .update(actualizar) //mandamos los datos de lo que nos trae el sistema
+   .eq("id",id); //Al que tenga el mismo id (identificador)
+
+   if(error){
+    throw new Error ("No se pudo actualizar el producto: " +error.message);
+   }
+   return data;
+
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\services\ventas\ventas.js
+========================================
+// Servicio Atomicos que se usan en todo el Inicio use client
+
+import { supabase } from "@/lib/supabase"; // conexion a supabase db
+
+//funcion que valida si hay usuario actual en sesion
+export const getUsuarioActual = async () => {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        console.error("ðŸ‘¤ ERROR AUTH:", authError?.message || "Sin sesiÃ³n");
+        throw new Error("Usuario no autenticado")
+    };
+    console.log("ðŸ‘¤ Usuario detectado:", user.email);
+    return user;
+};
+
+// funcion de insertarPedido
+export const insertarPedido = async (usuarioId, estado, total) => {
+    const { data, error } = await supabase.from('pedido')
+        .insert([{ usuario_id: usuarioId, estado, total }])
+        .select().single();
+    if (error) throw error;
+    return data;
+}
+
+// funcion de registrar compra
+export const registrarCompra = async (pedidoId, referencia) => {
+    const { error } = await supabase.from('compras').insert([{
+        pedido_id: pedidoId,
+        metodo_pago: 'Card',
+        estado_pago: 'pagado',
+        referencia_pago: referencia || 'pago_stripe_manual',
+    }]);
+    if (error) throw error;
+};
+
+//funcion de Factura
+export const Factura = async (pedidoId, carrito) => {
+    const items = carrito.map(item => ({
+        pedido_id: pedidoId,
+        producto_id: item.id,
+        cantidad: item.cantidad,
+        subtotal: item.precio * item.cantidad
+    }));
+    const { error } = await supabase.from('factura').insert(items);
+    if (error) throw error;
+};
+
+// funcion de descontar STOCK productos por carrito ðŸ›’
+export const descontarStock = async (carrito) => {
+    // Usamos Promise.all para que sea ultra veloz
+    const promesas = carrito.map(async (item) => {
+        const { data: prod } = await supabase.from('productos')
+            .select('stock').eq('id', item.id).single();
+        if (prod) {
+            return supabase.from('productos')
+                .update({ stock: prod.stock - item.cantidad })
+                .eq('id', item.id);
+        }
+    });
+    return Promise.all(promesas);
+};
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\services\cloudinary.js
+========================================
+ /*
+    cosas externas
+    Apis
+    peticiones
+    uploads
+ */
+
+export const subirImagen = async (archivo) => {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  console.log("Datos enviados:", { cloudName, preset, archivo }); // <-- RASTREADOR 1
+
+  const formData = new FormData();
+  formData.append("file", archivo);
+  formData.append("upload_preset", preset);
+
+  const respuesta = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!respuesta.ok) {
+   console.error("Error detallado de Cloudinary:", data); // <-- RASTREADOR 2
+   throw new Error("Error al subir a Cloudinary");
+};
+
+  const data = await respuesta.json();
+  return data.secure_url; 
+  // Este es el link mÃ¡gico que se pasa a supabase como text para leer mas rapido las imagenes
+};    
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\jsconfig.json
+========================================
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
+
+
+
+========================================
+=== ARCHIVO: C:\Users\Solutioncopy20\coffeshop\package.json
+========================================
+{
+  "name": "coffeshop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@stripe/react-stripe-js": "^6.3.0",
+    "@stripe/stripe-js": "^9.4.0",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4",
+    "next": "16.2.5",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "stripe": "^22.1.1",
+    "supabase": "^2.98.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.5",
+    "tailwindcss": "^4"
+  }
+}
+
+
+
